@@ -94,17 +94,28 @@ config MODEM_HANDSHAKE_DELAY_MS
 	help
 	  Configurable delay in milliseconds between initial handshake retry attempts.
 
+config MODEM_ENABLE_RESUME
+	bool "Enable ZMODEM file transfer auto-resume by default"
+	default y
+	depends on MODEM_ZMODEM
+	help
+	  When enabled, ZMODEM uses ZRPOS file offset to resume interrupted transfers.
+
+config MODEM_CONSOLE
+	bool "Zephyr Console Modem Protocol Integration"
+	default y
+	depends on FILE_SYSTEM
+	depends on MODEM_XMODEM || MODEM_YMODEM || MODEM_ZMODEM
+	help
+	  Enable shell integration for serial modem transfers and configuration.
+
+if MODEM_CONSOLE
+
 config MODEM_FILE_OVERWRITE_MODE
 	int "Default File Overwrite Mode (0=Overwrite, 1=Skip, 2=Abort)"
 	default 0
 	help
 	  File overwrite policy when target file exists: 0 for Overwrite, 1 for Skip, 2 for Abort.
-
-config MODEM_ENABLE_RESUME
-	bool "Enable ZMODEM file transfer auto-resume by default"
-	default y
-	help
-	  When enabled, ZMODEM uses ZRPOS file offset to resume interrupted transfers.
 
 config MODEM_DEFAULT_TARGET_DIR
 	string "Default Target Directory Path"
@@ -133,7 +144,7 @@ config MODEM_PROGRESS_BAR
 config MODEM_DIRECTORY_TRANSFERS
 	bool "Directory Batch Transfers"
 	default y
-	depends on FILE_SYSTEM
+	depends on MODEM_YMODEM || MODEM_ZMODEM
 	help
 	  Allow transmitting all files in a directory via YMODEM/ZMODEM batch transfers.
 
@@ -156,12 +167,6 @@ config MODEM_ABORT_KEY_CHAR
 	help
 	  ASCII byte value used as the terminal abort key (default 3 for Ctrl-C / 0x03, 27 for ESC / 0x1B, 24 for CAN / 0x18).
 
-config MODEM_CONSOLE
-	bool "Zephyr Console Modem Protocol Integration"
-	default y
-	depends on FILE_SYSTEM
-	depends on MODEM_XMODEM || MODEM_YMODEM || MODEM_ZMODEM
-	help
-	  Enable shell integration for serial modem transfers and configuration.
+endif # MODEM_CONSOLE
 
 endmenu

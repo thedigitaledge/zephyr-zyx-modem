@@ -48,7 +48,7 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
   * `0` = **Always Overwrite** existing file.
   * `1` = **Skip** file transfer if file exists.
   * `2` = **Abort** batch transfer if file exists.
-* **`CONFIG_MODEM_ENABLE_RESUME`** (bool, default `y`): Enable ZMODEM `ZRPOS` auto-resume for interrupted transfers.
+* **`CONFIG_MODEM_ENABLE_RESUME`** (bool, default `y`, depends on `MODEM_ZMODEM`): Enable ZMODEM `ZRPOS` auto-resume for interrupted transfers.
 * **`CONFIG_MODEM_DEFAULT_TARGET_DIR`** (string, default `""`): Default storage mount point directory path.
 * **`CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`** (int, default `10`): Interval in received payload blocks between calling storage `fs_sync()`.
 
@@ -56,7 +56,7 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_AUTO_START`** (bool, default `y`): Background monitoring of console stream for ZMODEM initiation sequence (`rz\r`).
 * **`CONFIG_MODEM_ASYNC_STORAGE`** (bool, default `y`): Offload file write operations to background Zephyr workqueues (`k_work`).
 * **`CONFIG_MODEM_PROGRESS_BAR`** (bool, default `y`): Real-time shell console progress bar and throughput (KB/s) indicator.
-* **`CONFIG_MODEM_DIRECTORY_TRANSFERS`** (bool, default `y`): Allow transmitting all files in a directory via batch transfers.
+* **`CONFIG_MODEM_DIRECTORY_TRANSFERS`** (bool, default `y`, depends on `MODEM_YMODEM || MODEM_ZMODEM`): Allow transmitting all files in a directory via batch transfers.
 * **`CONFIG_MODEM_RING_BUFFER`** (bool, default `y`): Non-blocking interrupt-driven ring buffer UART adapter.
 * **`CONFIG_MODEM_ABORT_KEY`** (bool, default `y`): Monitor console stream for Ctrl-C (`0x03`) or double CAN (`0x18 0x18`) user cancellation sequences.
 * **`CONFIG_MODEM_ABORT_KEY_CHAR`** (int, default `3`): ASCII byte value used as terminal abort key (e.g. `3` for Ctrl-C / `0x03`, `27` for ESC / `0x1B`, `24` for CAN / `0x18`).
