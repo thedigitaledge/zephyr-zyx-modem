@@ -7,7 +7,7 @@
  */
 
 #include "modem/zmodem.h"
-#include "modem/crc.h"
+#include "crc.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

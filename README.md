@@ -33,11 +33,11 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 ```
 ├── include/
 │   └── modem/
-│       ├── crc.h                  # Zephyr sys/crc.h wrapper functions
 │       ├── xmodem.h               # XMODEM protocol API definition
 │       ├── ymodem.h               # YMODEM protocol API definition
 │       └── zmodem.h               # ZMODEM protocol API definition
 ├── src/
+│   ├── crc.h                      # Zephyr sys/crc.h wrapper functions
 │   ├── crc.c                      # Checksum implementation
 │   ├── xmodem.c                   # XMODEM state machine and transfers
 │   ├── ymodem.c                   # YMODEM state machine and transfers

@@ -1,16 +1,18 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  *
- * Zephyr ztest protocol unit test suite.
+ * Zephyr ztest protocol unit test suite covering CRC, XMODEM, YMODEM,
+ * ZMODEM, transfer timeouts, transfer failures, and console configuration settings.
  */
 
 #include <zephyr/ztest.h>
 #include <string.h>
 
-#include "modem/crc.h"
+#include "crc.h"
 #include "modem/xmodem.h"
 #include "modem/ymodem.h"
 #include "modem/zmodem.h"
+#include "zephyr_console_modem.h"
 
 /* Loopback pipe helper for mock serial I/O tests */
 #define FIFO_BUF_SIZE 4096
@@ -45,7 +47,7 @@ static int mock_rx_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
     return 0;
 }
 
-static int mock_rx_write_bytes(const uint8_t *buf, size_t len, void *user_data)
+static int mock_rx_write_data(const uint8_t *buf, size_t len, void *user_data)
 {
     loopback_pipe_t *pipe = (loopback_pipe_t *)user_data;
     for (size_t i = 0; i < len; i++) {
@@ -89,7 +91,7 @@ ZTEST(modem_tests, test_xmodem_crc_receive)
 
     xmodem_callbacks_t cbs = {
         .read_byte = mock_rx_read_byte,
-        .write_bytes = mock_rx_write_bytes,
+        .write_bytes = mock_rx_write_data,
         .data_cb = mock_rx_data_cb,
         .user_data = &pipe
     };
@@ -120,6 +122,54 @@ ZTEST(modem_tests, test_xmodem_crc_receive)
     zassert_equal(status, XMODEM_OK, "XMODEM receive failed");
     zassert_equal(total_rx, 128, "Total received size mismatch");
     zassert_memequal(received_payload, block, 128, "Payload mismatch");
+}
+
+ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
+{
+    loopback_pipe_t pipe = {0};
+
+    xmodem_callbacks_t cbs = {
+        .read_byte = mock_rx_read_byte,
+        .write_bytes = mock_rx_write_data,
+        .data_cb = mock_rx_data_cb,
+        .user_data = &pipe
+    };
+
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+    cfg.max_retries = 2;
+
+    /* Empty pipe -> Should timeout */
+    size_t total_rx = 0;
+    xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
+    zassert_equal(status, XMODEM_ERROR_TIMEOUT, "Expected timeout failure");
+
+    /* CAN signal in pipe -> Should cancel */
+    uint8_t can_bytes[2] = { XMODEM_CAN, XMODEM_CAN };
+    pipe_write_to_rx(&pipe, can_bytes, 2);
+    status = xmodem_receive(&cbs, &cfg, &total_rx);
+    zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected cancel failure");
+}
+
+ZTEST(modem_tests, test_console_modem_settings)
+{
+    console_modem_settings_t current;
+    console_modem_settings_get(&current);
+    zassert_equal(current.packet_timeout_ms, 3000, "Default packet timeout mismatch");
+    zassert_equal(current.byte_timeout_ms, 1000, "Default byte timeout mismatch");
+    zassert_equal(current.max_retries, 10, "Default max retries mismatch");
+
+    console_modem_settings_t updated = {
+        .packet_timeout_ms = 5000,
+        .byte_timeout_ms = 2000,
+        .max_retries = 15
+    };
+    console_modem_settings_set(&updated);
+
+    console_modem_settings_get(&current);
+    zassert_equal(current.packet_timeout_ms, 5000, "Updated packet timeout mismatch");
+    zassert_equal(current.byte_timeout_ms, 2000, "Updated byte timeout mismatch");
+    zassert_equal(current.max_retries, 15, "Updated max retries mismatch");
 }
 
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);

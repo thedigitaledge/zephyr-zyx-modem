@@ -4,7 +4,7 @@
  * Implementation of 8-bit arithmetic checksum utility.
  */
 
-#include "modem/crc.h"
+#include "crc.h"
 
 uint8_t modem_checksum8(const uint8_t *buf, size_t len)
 {

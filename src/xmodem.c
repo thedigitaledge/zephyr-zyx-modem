@@ -6,7 +6,7 @@
  */
 
 #include "modem/xmodem.h"
-#include "modem/crc.h"
+#include "crc.h"
 #include <string.h>
 
 #define DEFAULT_BYTE_TIMEOUT_MS   1000
