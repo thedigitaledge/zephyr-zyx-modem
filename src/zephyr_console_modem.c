@@ -34,11 +34,41 @@
 #define CONFIG_MODEM_MAX_RETRIES 10
 #endif
 
+#if !defined(CONFIG_MODEM_INTER_BLOCK_DELAY_MS)
+#define CONFIG_MODEM_INTER_BLOCK_DELAY_MS 0
+#endif
+
+#if !defined(CONFIG_MODEM_HANDSHAKE_DELAY_MS)
+#define CONFIG_MODEM_HANDSHAKE_DELAY_MS 1000
+#endif
+
+#if !defined(CONFIG_MODEM_FILE_OVERWRITE_MODE)
+#define CONFIG_MODEM_FILE_OVERWRITE_MODE 0
+#endif
+
+#if !defined(CONFIG_MODEM_ENABLE_RESUME)
+#define CONFIG_MODEM_ENABLE_RESUME 1
+#endif
+
+#if !defined(CONFIG_MODEM_DEFAULT_TARGET_DIR)
+#define CONFIG_MODEM_DEFAULT_TARGET_DIR ""
+#endif
+
+#if !defined(CONFIG_MODEM_SYNC_INTERVAL_BLOCKS)
+#define CONFIG_MODEM_SYNC_INTERVAL_BLOCKS 10
+#endif
+
 /* Runtime Modem Configuration */
 static console_modem_settings_t g_modem_settings = {
     .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
     .byte_timeout_ms = CONFIG_MODEM_BYTE_TIMEOUT_MS,
-    .max_retries = CONFIG_MODEM_MAX_RETRIES
+    .max_retries = CONFIG_MODEM_MAX_RETRIES,
+    .inter_block_delay_ms = CONFIG_MODEM_INTER_BLOCK_DELAY_MS,
+    .handshake_delay_ms = CONFIG_MODEM_HANDSHAKE_DELAY_MS,
+    .overwrite_mode = (modem_overwrite_mode_t)CONFIG_MODEM_FILE_OVERWRITE_MODE,
+    .enable_resume = CONFIG_MODEM_ENABLE_RESUME,
+    .default_target_dir = CONFIG_MODEM_DEFAULT_TARGET_DIR,
+    .sync_interval_blocks = CONFIG_MODEM_SYNC_INTERVAL_BLOCKS
 };
 
 void console_modem_settings_get(console_modem_settings_t *settings)
@@ -139,6 +169,11 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
     ssize_t res = fs_write(&ctx->zfile, buf, len);
     if (res < 0) return -1;
     ctx->bytes_transferred += (size_t)res;
+
+    if (g_modem_settings.sync_interval_blocks > 0) {
+        fs_sync(&ctx->zfile);
+    }
+
     return ((size_t)res == len) ? 0 : -1;
 }
 
@@ -198,7 +233,7 @@ static int ymodem_on_file_start(const ymodem_file_info_t *info, void *user_data)
     return 0;
 }
 
-static int ymodem_on_data(const uint8_t *buf, size_t len, size_t offset, void *user_data)
+static int ymodem_on_file_data(const uint8_t *buf, size_t len, size_t offset, void *user_data)
 {
     (void)offset;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
@@ -272,7 +307,7 @@ static void zmodem_on_file_end(const zmodem_file_info_t *info, zmodem_status_t s
 }
 
 /* ZMODEM TX Callbacks */
-static int zmodem_tx_get_file_info(size_t file_index, zmodem_file_info_t *info, void *user_data)
+static int zmodem_tx_get_file_metadata(size_t file_index, zmodem_file_info_t *info, void *user_data)
 {
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
     if (!ctx || file_index > 0) return -1;
@@ -333,7 +368,7 @@ int console_modem_rx_ymodem(const char *output_filename)
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
         .on_file_start = ymodem_on_file_start,
-        .on_data = ymodem_on_data,
+        .on_data = ymodem_on_file_data,
         .on_file_end = ymodem_on_file_end,
         .user_data = &ctx
     };
@@ -421,7 +456,7 @@ int console_modem_tx_zmodem(const char *input_filename)
     zmodem_tx_callbacks_t cbs = {
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
-        .get_file_info = zmodem_tx_get_file_info,
+        .get_file_info = zmodem_tx_get_file_metadata,
         .read_data = zmodem_tx_read_data,
         .user_data = &ctx
     };
@@ -488,15 +523,22 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
 {
     if (argc == 1) {
         shell_print(sh, "Modem Configuration:");
-        shell_print(sh, "  Packet Timeout: %u ms", g_modem_settings.packet_timeout_ms);
-        shell_print(sh, "  Byte Timeout:   %u ms", g_modem_settings.byte_timeout_ms);
-        shell_print(sh, "  Max Retries:    %u", g_modem_settings.max_retries);
+        shell_print(sh, "  Packet Timeout:      %u ms", g_modem_settings.packet_timeout_ms);
+        shell_print(sh, "  Byte Timeout:        %u ms", g_modem_settings.byte_timeout_ms);
+        shell_print(sh, "  Max Retries:         %u", g_modem_settings.max_retries);
+        shell_print(sh, "  Inter-block Delay:   %u ms", g_modem_settings.inter_block_delay_ms);
+        shell_print(sh, "  Handshake Delay:     %u ms", g_modem_settings.handshake_delay_ms);
+        shell_print(sh, "  Overwrite Mode:      %d", (int)g_modem_settings.overwrite_mode);
+        shell_print(sh, "  Auto-Resume:         %s", g_modem_settings.enable_resume ? "true" : "false");
+        shell_print(sh, "  Target Directory:    %s", g_modem_settings.default_target_dir[0] ? g_modem_settings.default_target_dir : "(root)");
+        shell_print(sh, "  Sync Interval:       %u blocks", g_modem_settings.sync_interval_blocks);
         return 0;
     }
 
     if (argc >= 3) {
         const char *param = argv[1];
-        uint32_t val = (uint32_t)strtoul(argv[2], NULL, 10);
+        const char *val_str = argv[2];
+        uint32_t val = (uint32_t)strtoul(val_str, NULL, 10);
 
         if (strcmp(param, "packet_timeout") == 0 || strcmp(param, "pkt_timeout") == 0) {
             g_modem_settings.packet_timeout_ms = val;
@@ -507,6 +549,25 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "max_retries") == 0 || strcmp(param, "retries") == 0) {
             g_modem_settings.max_retries = (uint8_t)val;
             shell_print(sh, "Max retries set to %u", val);
+        } else if (strcmp(param, "inter_block_delay") == 0) {
+            g_modem_settings.inter_block_delay_ms = val;
+            shell_print(sh, "Inter-block delay set to %u ms", val);
+        } else if (strcmp(param, "handshake_delay") == 0) {
+            g_modem_settings.handshake_delay_ms = val;
+            shell_print(sh, "Handshake delay set to %u ms", val);
+        } else if (strcmp(param, "overwrite_mode") == 0) {
+            g_modem_settings.overwrite_mode = (modem_overwrite_mode_t)val;
+            shell_print(sh, "Overwrite mode set to %d", (int)val);
+        } else if (strcmp(param, "enable_resume") == 0 || strcmp(param, "resume") == 0) {
+            g_modem_settings.enable_resume = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Auto-resume set to %s", g_modem_settings.enable_resume ? "true" : "false");
+        } else if (strcmp(param, "target_dir") == 0) {
+            strncpy(g_modem_settings.default_target_dir, val_str, sizeof(g_modem_settings.default_target_dir) - 1);
+            g_modem_settings.default_target_dir[sizeof(g_modem_settings.default_target_dir) - 1] = '\0';
+            shell_print(sh, "Default target directory set to %s", g_modem_settings.default_target_dir);
+        } else if (strcmp(param, "sync_interval") == 0) {
+            g_modem_settings.sync_interval_blocks = val;
+            shell_print(sh, "Sync interval set to %u blocks", val);
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;
@@ -514,7 +575,7 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         return 0;
     }
 
-    shell_error(sh, "Usage: modem config [packet_timeout|byte_timeout|max_retries <val>]");
+    shell_error(sh, "Usage: modem config [param val]");
     return -1;
 }
 
@@ -523,7 +584,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
     SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [x|y|z] [file]", cmd_modem_rx, 1, 2),
     SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx [x|y|z] <file>", cmd_modem_tx, 2, 1),
 #endif
-    SHELL_CMD_ARG(config, NULL, "Configure modem timeouts/retries: modem config [param val]", cmd_modem_config, 1, 2),
+    SHELL_CMD_ARG(config, NULL, "Configure modem settings: modem config [param val]", cmd_modem_config, 1, 2),
     SHELL_SUBCMD_SET_END
 );
 

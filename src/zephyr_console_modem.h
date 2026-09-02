@@ -11,10 +11,35 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief File Overwrite Policies
+ */
+typedef enum {
+    MODEM_OVERWRITE_ALWAYS = 0, /**< Overwrite existing file */
+    MODEM_OVERWRITE_SKIP   = 1, /**< Skip transfer if file exists */
+    MODEM_OVERWRITE_ABORT  = 2  /**< Abort transfer if file exists */
+} modem_overwrite_mode_t;
+
+/**
+ * @brief Runtime Modem Transfer Settings
+ */
+typedef struct {
+    uint32_t packet_timeout_ms;    /**< Timeout waiting for packet responses */
+    uint32_t byte_timeout_ms;      /**< Timeout waiting for next byte */
+    uint8_t max_retries;           /**< Maximum retries per packet */
+    uint32_t inter_block_delay_ms; /**< Delay inserted between transmitted blocks */
+    uint32_t handshake_delay_ms;   /**< Delay between handshake attempts */
+    modem_overwrite_mode_t overwrite_mode; /**< File overwrite policy */
+    bool enable_resume;            /**< Enable ZMODEM auto-resume */
+    char default_target_dir[128];  /**< Default storage directory path */
+    uint32_t sync_interval_blocks; /**< Interval in blocks between file syncs */
+} console_modem_settings_t;
 
 /**
  * @brief Initialize Zephyr console modem commands.
@@ -24,15 +49,6 @@ extern "C" {
  * @return 0 on success, negative error code on failure.
  */
 int zephyr_console_modem_init(void);
-
-/**
- * @brief Runtime Modem Transfer Settings
- */
-typedef struct {
-    uint32_t packet_timeout_ms; /**< Timeout waiting for packet responses */
-    uint32_t byte_timeout_ms;   /**< Timeout waiting for next byte */
-    uint8_t max_retries;        /**< Maximum retries per packet */
-} console_modem_settings_t;
 
 /**
  * @brief Get current runtime modem settings.

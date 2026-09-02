@@ -8,6 +8,7 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 
 - **XMODEM Protocol**:
   - Receiver and Transmitter supporting standard 128-byte block mode with 8-bit checksum, XMODEM-CRC (128-byte block), and XMODEM-1K (1024-byte block).
+  - Configurable default block size (`CONFIG_MODEM_XMODEM_BLOCK_SIZE_1024`) and default CRC negotiation (`CONFIG_MODEM_XMODEM_USE_CRC`).
   - Handles packet timeouts, retransmissions, sequence errors, and cancellation.
 
 - **YMODEM Protocol**:
@@ -17,15 +18,17 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 
 - **ZMODEM Protocol**:
   - High-performance streaming file uploads and downloads.
-  - Support for HEX, BIN16, and ZDLE escape sequence processing.
-  - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` position offsets.
+  - Support for HEX, BIN16, and ZDLE escape sequence processing (`CONFIG_MODEM_ZMODEM_ESCAPE_CTRL_CHARS`).
+  - Support for 32-bit CRC (`CONFIG_MODEM_ZMODEM_USE_CRC32`).
+  - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
 - **Zephyr OS Console & Shell Integration**:
   - Zephyr shell commands:
     - Receive commands (requires `CONFIG_FILE_SYSTEM`): `modem rx [x|y|z] [file]` or short command `mrx [x|y|z] [file]`
     - Transmit commands (requires `CONFIG_FILE_SYSTEM`): `modem tx [x|y|z] <file>` or short command `mtx [x|y|z] <file>`
-    - Configuration command: `modem config [packet_timeout|byte_timeout|max_retries <val>]`
-  - Configurable timeouts and retries via Kconfig defaults (`CONFIG_MODEM_PACKET_TIMEOUT_MS`, `CONFIG_MODEM_BYTE_TIMEOUT_MS`, `CONFIG_MODEM_MAX_RETRIES`).
+    - Configuration command: `modem config [param val]`
+  - Configurable timeouts and pacing via Kconfig defaults (`CONFIG_MODEM_PACKET_TIMEOUT_MS`, `CONFIG_MODEM_BYTE_TIMEOUT_MS`, `CONFIG_MODEM_MAX_RETRIES`, `CONFIG_MODEM_INTER_BLOCK_DELAY_MS`, `CONFIG_MODEM_HANDSHAKE_DELAY_MS`).
+  - Configurable file storage policy (`CONFIG_MODEM_FILE_OVERWRITE_MODE`, `CONFIG_MODEM_DEFAULT_TARGET_DIR`, `CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`).
   - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
@@ -72,9 +75,19 @@ To use this module in a Zephyr application:
    CONFIG_MODEM_XMODEM=y
    CONFIG_MODEM_YMODEM=y
    CONFIG_MODEM_ZMODEM=y
+   CONFIG_MODEM_XMODEM_BLOCK_SIZE_1024=y
+   CONFIG_MODEM_XMODEM_USE_CRC=y
+   CONFIG_MODEM_ZMODEM_USE_CRC32=y
+   CONFIG_MODEM_ZMODEM_ESCAPE_CTRL_CHARS=y
    CONFIG_MODEM_PACKET_TIMEOUT_MS=3000
    CONFIG_MODEM_BYTE_TIMEOUT_MS=1000
    CONFIG_MODEM_MAX_RETRIES=10
+   CONFIG_MODEM_INTER_BLOCK_DELAY_MS=0
+   CONFIG_MODEM_HANDSHAKE_DELAY_MS=1000
+   CONFIG_MODEM_FILE_OVERWRITE_MODE=0
+   CONFIG_MODEM_ENABLE_RESUME=y
+   CONFIG_MODEM_DEFAULT_TARGET_DIR=""
+   CONFIG_MODEM_SYNC_INTERVAL_BLOCKS=10
    ```
 3. Use terminal tools like `sx` / `sb` / `sz` or `rx` / `rb` / `rz` (from `lrzsz` or Minicom) to upload and download files directly over the Zephyr shell console.
 

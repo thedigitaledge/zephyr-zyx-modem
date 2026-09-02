@@ -60,7 +60,7 @@ static int mock_rx_write_data(const uint8_t *buf, size_t len, void *user_data)
 static uint8_t received_payload[XMODEM_BLOCK_SIZE_1024];
 static size_t total_payload_received = 0;
 
-static int mock_rx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len, void *user_data)
+static int mock_rx_data_payload_cb(uint32_t block_num, const uint8_t *buf, size_t len, void *user_data)
 {
     (void)block_num;
     (void)user_data;
@@ -92,7 +92,7 @@ ZTEST(modem_tests, test_xmodem_crc_receive)
     xmodem_callbacks_t cbs = {
         .read_byte = mock_rx_read_byte,
         .write_bytes = mock_rx_write_data,
-        .data_cb = mock_rx_data_cb,
+        .data_cb = mock_rx_data_payload_cb,
         .user_data = &pipe
     };
 
@@ -131,7 +131,7 @@ ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
     xmodem_callbacks_t cbs = {
         .read_byte = mock_rx_read_byte,
         .write_bytes = mock_rx_write_data,
-        .data_cb = mock_rx_data_cb,
+        .data_cb = mock_rx_data_payload_cb,
         .user_data = &pipe
     };
 
@@ -151,25 +151,41 @@ ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
     zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected cancel failure");
 }
 
-ZTEST(modem_tests, test_console_modem_settings)
+ZTEST(modem_tests, test_console_modem_settings_and_options)
 {
     console_modem_settings_t current;
     console_modem_settings_get(&current);
     zassert_equal(current.packet_timeout_ms, 3000, "Default packet timeout mismatch");
     zassert_equal(current.byte_timeout_ms, 1000, "Default byte timeout mismatch");
     zassert_equal(current.max_retries, 10, "Default max retries mismatch");
+    zassert_equal(current.inter_block_delay_ms, 0, "Default inter-block delay mismatch");
+    zassert_equal(current.handshake_delay_ms, 1000, "Default handshake delay mismatch");
+    zassert_equal(current.overwrite_mode, MODEM_OVERWRITE_ALWAYS, "Default overwrite mode mismatch");
+    zassert_equal(current.enable_resume, true, "Default resume setting mismatch");
 
     console_modem_settings_t updated = {
-        .packet_timeout_ms = 5000,
-        .byte_timeout_ms = 2000,
-        .max_retries = 15
+        .packet_timeout_ms = 6000,
+        .byte_timeout_ms = 1500,
+        .max_retries = 20,
+        .inter_block_delay_ms = 50,
+        .handshake_delay_ms = 2000,
+        .overwrite_mode = MODEM_OVERWRITE_SKIP,
+        .enable_resume = false,
+        .default_target_dir = "/RAM:",
+        .sync_interval_blocks = 5
     };
     console_modem_settings_set(&updated);
 
     console_modem_settings_get(&current);
-    zassert_equal(current.packet_timeout_ms, 5000, "Updated packet timeout mismatch");
-    zassert_equal(current.byte_timeout_ms, 2000, "Updated byte timeout mismatch");
-    zassert_equal(current.max_retries, 15, "Updated max retries mismatch");
+    zassert_equal(current.packet_timeout_ms, 6000, "Updated packet timeout mismatch");
+    zassert_equal(current.byte_timeout_ms, 1500, "Updated byte timeout mismatch");
+    zassert_equal(current.max_retries, 20, "Updated max retries mismatch");
+    zassert_equal(current.inter_block_delay_ms, 50, "Updated inter-block delay mismatch");
+    zassert_equal(current.handshake_delay_ms, 2000, "Updated handshake delay mismatch");
+    zassert_equal(current.overwrite_mode, MODEM_OVERWRITE_SKIP, "Updated overwrite mode mismatch");
+    zassert_equal(current.enable_resume, false, "Updated resume setting mismatch");
+    zassert_str_equal(current.default_target_dir, "/RAM:", "Updated default target dir mismatch");
+    zassert_equal(current.sync_interval_blocks, 5, "Updated sync interval mismatch");
 }
 
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);
