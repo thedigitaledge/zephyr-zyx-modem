@@ -235,7 +235,17 @@ Standalone sample applications are available in `samples/`:
 * **`samples/multi_file_download_ymodem/`**: Demonstrates transmitting multiple data log files from device storage using YMODEM batch mode.
 * **`samples/autostart_batch_upload_zmodem/`**: Demonstrates monitoring console stream for `rz\r` auto-start sequence and receiving multi-file batch uploads over ZMODEM.
 
-Build any sample application using West:
+## 6. Host Automation Utility (`tools/send_receive.py`)
+
+A Python host automation utility script is provided under `tools/send_receive.py` to automate sending and receiving files via UART in CI/CD pipelines or test rigs:
+
+```bash
+python3 tools/send_receive.py --port /dev/ttyUSB0 --baud 115200 --action send --protocol zmodem --file firmware.bin
+```
+
+---
+
+## 7. Kconfig Configuration Reference
 
 ```bash
 west build -b <board> samples/firmware_upload_xmodem
@@ -243,7 +253,6 @@ west build -b <board> samples/firmware_upload_xmodem
 
 ---
 
-## 6. Kconfig Configuration Reference
 
 Below are the Kconfig configuration symbols defined in `Kconfig`, including their default values and detailed explanations:
 

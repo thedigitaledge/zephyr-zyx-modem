@@ -81,6 +81,8 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 │   ├── firmware_upload_xmodem/    # XMODEM Firmware Image Upload to Device Flash
 │   ├── multi_file_download_ymodem/# YMODEM Multi-File Batch Download from Device
 │   └── autostart_batch_upload_zmodem/# ZMODEM Auto-Start (`rz\r`) Batch Upload
+├── tools/                         # Host-side Automation Utilities
+│   └── send_receive.py            # Python Host Automation Serial Transfer Tool
 ├── tests/                         # Zephyr ztest / Twister test suite
 │   ├── src/
 │   │   └── main.c                 # ztest protocol test cases
