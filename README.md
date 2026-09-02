@@ -21,9 +21,9 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` position offsets.
 
 - **Zephyr OS Console & Shell Integration**:
-  - Zephyr shell commands registered under `modem`:
-    - Receive commands: `modem rx [file]`, `modem ry [file]`, `modem rz [file]` (aliases: `rx`, `ry`, `rz`)
-    - Transmit commands: `modem sx <file>`, `modem sy <file>`, `modem sz <file>` (aliases: `sx`, `sy`, `sz`)
+  - Zephyr shell commands:
+    - Receive commands: `modem rx [file] [x|y|z]` or short command `mrx [file] [x|y|z]`
+    - Transmit commands: `modem tx <file> [x|y|z]` or short command `mtx <file> [x|y|z]`
   - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
@@ -50,6 +50,7 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 │   └── testcase.yaml              # Twister test case specification
 ├── CMakeLists.txt                 # Zephyr module build file (zephyr_library)
 ├── Kconfig                        # Zephyr Kconfig options (selects CRC)
+├── LICENSE                        # Apache License Version 2.0
 ├── zephyr/module.yml              # Zephyr OS module descriptor
 └── README.md
 ```

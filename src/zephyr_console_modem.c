@@ -70,7 +70,7 @@ static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
 {
     (void)user_data;
 #if defined(__ZEPHYR__)
-    for (size_t i = 0; i < len; i++) {
+    for (size_size_t i = 0; i < len; i++) {
         console_putchar(buf[i]);
     }
     return 0;
@@ -133,12 +133,6 @@ static int open_input_file(console_modem_ctx_t *ctx, const char *path)
 /**
  * Write payload buffer chunk to active output file.
  */
-static int write_output_file(console_modem_ctx_t *ctx, const uint8_t *buf, size_size_t len)
-{
-    (void)len;
-    return -1;
-}
-
 static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t len)
 {
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
@@ -256,7 +250,7 @@ static int ymodem_tx_get_file_info(size_t file_index, ymodem_file_info_t *info, 
     return 0;
 }
 
-static int ymodem_tx_read_data(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
+static int ymodem_tx_read_file_chunk(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
 {
     (void)file_index;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
@@ -281,7 +275,16 @@ static int zmodem_on_file_start(const zmodem_file_info_t *info, void *user_data)
     return 0;
 }
 
-static int zmodem_on_data(const uint8_t *buf, size_t len, size_t offset, void *user_data)
+static int zmodem_on_data(const uint8_t *buf, size_size_t len, size_t offset, void *user_data)
+{
+    (void)len;
+    (void)offset;
+    (void)buf;
+    (void)user_data;
+    return -1;
+}
+
+static int zmodem_on_file_data(const uint8_t *buf, size_t len, size_t offset, void *user_data)
 {
     (void)offset;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
@@ -374,7 +377,7 @@ int console_modem_rx_zmodem(const char *output_filename)
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
         .on_file_start = zmodem_on_file_start,
-        .on_data = zmodem_on_data,
+        .on_data = zmodem_on_file_data,
         .on_file_end = zmodem_on_file_end,
         .user_data = &ctx
     };
@@ -416,7 +419,7 @@ int console_modem_tx_ymodem(const char *input_filename)
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
         .get_file_info = ymodem_tx_get_file_info,
-        .read_data = ymodem_tx_read_data,
+        .read_data = ymodem_tx_read_file_chunk,
         .user_data = &ctx
     };
 
@@ -452,62 +455,50 @@ int console_modem_tx_zmodem(const char *input_filename)
 static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
 {
     (void)sh;
-    const char *out_path = (argc > 1) ? argv[1] : "xmodem.bin";
-    return console_modem_rx_xmodem(out_path);
+    const char *out_path = NULL;
+    const char *proto = "zmodem";
+
+    if (argc > 1) {
+        out_path = argv[1];
+    }
+    if (argc > 2) {
+        proto = argv[2];
+    }
+
+    if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
+        return console_modem_rx_xmodem(out_path ? out_path : "xmodem.bin");
+    } else if (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) {
+        return console_modem_rx_ymodem(out_path);
+    } else {
+        return console_modem_rx_zmodem(out_path);
+    }
 }
 
-static int cmd_modem_ry(const struct shell *sh, size_t argc, char **argv)
-{
-    (void)sh;
-    const char *out_path = (argc > 1) ? argv[1] : NULL;
-    return console_modem_rx_ymodem(out_path);
-}
-
-static int cmd_modem_rz(const struct shell *sh, size_t argc, char **argv)
-{
-    (void)sh;
-    const char *out_path = (argc > 1) ? argv[1] : NULL;
-    return console_modem_rx_zmodem(out_path);
-}
-
-static int cmd_modem_sx(const struct shell *sh, size_t argc, char **argv)
-{
-    (void)sh;
-    if (argc < 2) return -1;
-    return console_modem_tx_xmodem(argv[1]);
-}
-
-static int cmd_modem_sy(const struct shell *sh, size_t argc, char **argv)
+static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
 {
     (void)sh;
     if (argc < 2) return -1;
-    return console_modem_tx_ymodem(argv[1]);
-}
+    const char *in_path = argv[1];
+    const char *proto = (argc > 2) ? argv[2] : "zmodem";
 
-static int cmd_modem_sz(const struct shell *sh, size_t argc, char **argv)
-{
-    (void)sh;
-    if (argc < 2) return -1;
-    return console_modem_tx_zmodem(argv[1]);
+    if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
+        return console_modem_tx_xmodem(in_path);
+    } else if (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) {
+        return console_modem_tx_ymodem(in_path);
+    } else {
+        return console_modem_tx_zmodem(in_path);
+    }
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
-    SHELL_CMD_ARG(rx, NULL, "Receive file using XMODEM: modem rx <file>", cmd_modem_rx, 1, 1),
-    SHELL_CMD_ARG(ry, NULL, "Receive file using YMODEM: modem ry [file]", cmd_modem_ry, 1, 1),
-    SHELL_CMD_ARG(rz, NULL, "Receive file using ZMODEM: modem rz [file]", cmd_modem_rz, 1, 1),
-    SHELL_CMD_ARG(sx, NULL, "Send file using XMODEM: modem sx <file>", cmd_modem_sx, 2, 0),
-    SHELL_CMD_ARG(sy, NULL, "Send file using YMODEM: modem sy <file>", cmd_modem_sy, 2, 0),
-    SHELL_CMD_ARG(sz, NULL, "Send file using ZMODEM: modem sz <file>", cmd_modem_sz, 2, 0),
+    SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [file] [x|y|z]", cmd_modem_rx, 1, 2),
+    SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx <file> [x|y|z]", cmd_modem_tx, 2, 1),
     SHELL_SUBCMD_SET_END
 );
 
 SHELL_CMD_REGISTER(modem, &sub_modem, "Serial transfer protocols (XMODEM/YMODEM/ZMODEM)", NULL);
-SHELL_CMD_REGISTER(rx, NULL, "Alias for modem rx (XMODEM receive)", cmd_modem_rx);
-SHELL_CMD_REGISTER(ry, NULL, "Alias for modem ry (YMODEM receive)", cmd_modem_ry);
-SHELL_CMD_REGISTER(rz, NULL, "Alias for modem rz (ZMODEM receive)", cmd_modem_rz);
-SHELL_CMD_REGISTER(sx, NULL, "Alias for modem sx (XMODEM send)", cmd_modem_sx);
-SHELL_CMD_REGISTER(sy, NULL, "Alias for modem sy (YMODEM send)", cmd_modem_sy);
-SHELL_CMD_REGISTER(sz, NULL, "Alias for modem sz (ZMODEM send)", cmd_modem_sz);
+SHELL_CMD_REGISTER(mrx, NULL, "Short command for modem rx", cmd_modem_rx);
+SHELL_CMD_REGISTER(mtx, NULL, "Short command for modem tx", cmd_modem_tx);
 
 #endif
 
