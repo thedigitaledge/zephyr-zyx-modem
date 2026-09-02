@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Zephyr OS Environment
-        uses: zephyrproject-rtos/action-setup-zephyr@v1
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: '.'
           toolchains: zephyr

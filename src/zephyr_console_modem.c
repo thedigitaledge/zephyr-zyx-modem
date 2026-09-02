@@ -990,7 +990,7 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
 #if defined(CONFIG_FILE_SYSTEM)
     SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [x|y|z] [file]", cmd_modem_rx, 1, 2),
-    SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx [x|y|z] <file>", cmd_modem_tx, 2, 1),
+    SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx [x|y|z] <file>", cmd_modem_tx, 1, 2),
     SHELL_CMD_ARG(update, NULL, "Stream MCUBoot update: modem update [x|y|z] <file>", cmd_modem_rx, 1, 2),
 #endif
     SHELL_CMD_ARG(config, NULL, "Configure modem settings: modem config [param val]", cmd_modem_config, 1, 2),

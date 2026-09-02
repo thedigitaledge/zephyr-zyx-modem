@@ -133,8 +133,14 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
 
         /* Step 2e: Read and verify block sequence number */
         uint8_t blk_num, blk_num_inv;
-        if (callbacks->read_byte(&blk_num, cfg.byte_timeout_ms, callbacks->user_data) != 0 ||
-            callbacks->read_byte(&blk_num_inv, cfg.byte_timeout_ms, callbacks->user_data) != 0) {
+        int r1 = callbacks->read_byte(&blk_num, cfg.byte_timeout_ms, callbacks->user_data);
+        int r2 = callbacks->read_byte(&blk_num_inv, cfg.byte_timeout_ms, callbacks->user_data);
+        if (r1 == -2 || r2 == -2) {
+            send_byte(callbacks, XMODEM_CAN);
+            send_byte(callbacks, XMODEM_CAN);
+            return XMODEM_ERROR_CANCEL;
+        }
+        if (r1 != 0 || r2 != 0) {
             purge_rx(callbacks);
             retries++;
             send_byte(callbacks, XMODEM_NAK);
@@ -151,7 +157,13 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
         /* Step 2f: Read block payload bytes */
         bool io_error = false;
         for (size_t i = 0; i < block_len; i++) {
-            if (callbacks->read_byte(&payload[i], cfg.byte_timeout_ms, callbacks->user_data) != 0) {
+            int pr = callbacks->read_byte(&payload[i], cfg.byte_timeout_ms, callbacks->user_data);
+            if (pr == -2) {
+                send_byte(callbacks, XMODEM_CAN);
+                send_byte(callbacks, XMODEM_CAN);
+                return XMODEM_ERROR_CANCEL;
+            }
+            if (pr != 0) {
                 io_error = true;
                 break;
             }
@@ -167,8 +179,14 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
         /* Step 2g: Check CRC or checksum */
         if (crc_mode) {
             uint8_t crc_hi, crc_lo;
-            if (callbacks->read_byte(&crc_hi, cfg.byte_timeout_ms, callbacks->user_data) != 0 ||
-                callbacks->read_byte(&crc_lo, cfg.byte_timeout_ms, callbacks->user_data) != 0) {
+            int cr1 = callbacks->read_byte(&crc_hi, cfg.byte_timeout_ms, callbacks->user_data);
+            int cr2 = callbacks->read_byte(&crc_lo, cfg.byte_timeout_ms, callbacks->user_data);
+            if (cr1 == -2 || cr2 == -2) {
+                send_byte(callbacks, XMODEM_CAN);
+                send_byte(callbacks, XMODEM_CAN);
+                return XMODEM_ERROR_CANCEL;
+            }
+            if (cr1 != 0 || cr2 != 0) {
                 purge_rx(callbacks);
                 retries++;
                 send_byte(callbacks, XMODEM_NAK);
@@ -185,7 +203,13 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             }
         } else {
             uint8_t cksum;
-            if (callbacks->read_byte(&cksum, cfg.byte_timeout_ms, callbacks->user_data) != 0) {
+            int ckr = callbacks->read_byte(&cksum, cfg.byte_timeout_ms, callbacks->user_data);
+            if (ckr == -2) {
+                send_byte(callbacks, XMODEM_CAN);
+                send_byte(callbacks, XMODEM_CAN);
+                return XMODEM_ERROR_CANCEL;
+            }
+            if (ckr != 0) {
                 purge_rx(callbacks);
                 retries++;
                 send_byte(callbacks, XMODEM_NAK);
