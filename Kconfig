@@ -1,33 +1,37 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Kconfig definition for Zephyr Console Modem Protocols.
+# Kconfig definition for Zephyr Modem Protocols and Console Integration.
 
-config MODEM_CONSOLE
-	bool "Zephyr Console Modem Protocol Support"
-	default y
-	select CRC
-	help
-	  Enable XMODEM, YMODEM, and ZMODEM serial communication protocol support
-	  and shell commands for uploading/downloading files over Zephyr console.
-
-if MODEM_CONSOLE
+menu "Zephyr Modem Protocols"
 
 config MODEM_XMODEM
 	bool "XMODEM Protocol"
 	default y
+	select CRC
 	help
 	  Enable XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum).
 
 config MODEM_YMODEM
 	bool "YMODEM Protocol"
 	default y
+	select CRC
 	help
 	  Enable YMODEM protocol engine (Block 0 file metadata, batch transfer).
 
 config MODEM_ZMODEM
 	bool "ZMODEM Protocol"
 	default y
+	select CRC
 	help
 	  Enable ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
 
-endif # MODEM_CONSOLE
+config MODEM_CONSOLE
+	bool "Zephyr Console Modem Protocol Integration"
+	default y
+	depends on FILE_SYSTEM
+	depends on MODEM_XMODEM || MODEM_YMODEM || MODEM_ZMODEM
+	help
+	  Enable shell commands (`modem rx`/`mrx`, `modem tx`/`mtx`) and
+	  Zephyr console integration for serial file uploads and downloads.
+
+endmenu

@@ -6,7 +6,7 @@
  * with Zephyr shell commands and Zephyr VFS file systems.
  */
 
-#include "modem/zephyr_console_modem.h"
+#include "zephyr_console_modem.h"
 #include "modem/xmodem.h"
 #include "modem/ymodem.h"
 #include "modem/zmodem.h"
@@ -70,7 +70,7 @@ static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
 {
     (void)user_data;
 #if defined(__ZEPHYR__)
-    for (size_size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         console_putchar(buf[i]);
     }
     return 0;
@@ -275,15 +275,6 @@ static int zmodem_on_file_start(const zmodem_file_info_t *info, void *user_data)
     return 0;
 }
 
-static int zmodem_on_data(const uint8_t *buf, size_size_t len, size_t offset, void *user_data)
-{
-    (void)len;
-    (void)offset;
-    (void)buf;
-    (void)user_data;
-    return -1;
-}
-
 static int zmodem_on_file_data(const uint8_t *buf, size_t len, size_t offset, void *user_data)
 {
     (void)offset;
@@ -455,22 +446,25 @@ int console_modem_tx_zmodem(const char *input_filename)
 static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
 {
     (void)sh;
-    const char *out_path = NULL;
     const char *proto = "zmodem";
+    const char *out_path = NULL;
 
     if (argc > 1) {
-        out_path = argv[1];
+        proto = argv[1];
     }
     if (argc > 2) {
-        proto = argv[2];
+        out_path = argv[2];
     }
 
     if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
         return console_modem_rx_xmodem(out_path ? out_path : "xmodem.bin");
     } else if (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) {
         return console_modem_rx_ymodem(out_path);
-    } else {
+    } else if (proto && (strcmp(proto, "zmodem") == 0 || strcmp(proto, "z") == 0)) {
         return console_modem_rx_zmodem(out_path);
+    } else {
+        /* If first argument is not protocol name, treat first arg as output file */
+        return console_modem_rx_zmodem(argv[1]);
     }
 }
 
@@ -478,8 +472,15 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
 {
     (void)sh;
     if (argc < 2) return -1;
-    const char *in_path = argv[1];
-    const char *proto = (argc > 2) ? argv[2] : "zmodem";
+
+    const char *proto = argv[1];
+    const char *in_path = (argc > 2) ? argv[2] : NULL;
+
+    if (argc == 2) {
+        /* Default to zmodem protocol if only filename provided */
+        in_path = argv[1];
+        proto = "zmodem";
+    }
 
     if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
         return console_modem_tx_xmodem(in_path);
@@ -491,14 +492,14 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
-    SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [file] [x|y|z]", cmd_modem_rx, 1, 2),
-    SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx <file> [x|y|z]", cmd_modem_tx, 2, 1),
+    SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [x|y|z] [file]", cmd_modem_rx, 1, 2),
+    SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx [x|y|z] <file>", cmd_modem_tx, 2, 1),
     SHELL_SUBCMD_SET_END
 );
 
 SHELL_CMD_REGISTER(modem, &sub_modem, "Serial transfer protocols (XMODEM/YMODEM/ZMODEM)", NULL);
-SHELL_CMD_REGISTER(mrx, NULL, "Short command for modem rx", cmd_modem_rx);
-SHELL_CMD_REGISTER(mtx, NULL, "Short command for modem tx", cmd_modem_tx);
+SHELL_CMD_REGISTER(mrx, NULL, "Short command for modem rx: mrx [x|y|z] [file]", cmd_modem_rx);
+SHELL_CMD_REGISTER(mtx, NULL, "Short command for modem tx: mtx [x|y|z] <file>", cmd_modem_tx);
 
 #endif
 

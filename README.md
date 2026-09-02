@@ -22,8 +22,8 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 
 - **Zephyr OS Console & Shell Integration**:
   - Zephyr shell commands:
-    - Receive commands: `modem rx [file] [x|y|z]` or short command `mrx [file] [x|y|z]`
-    - Transmit commands: `modem tx <file> [x|y|z]` or short command `mtx <file> [x|y|z]`
+    - Receive commands: `modem rx [x|y|z] [file]` or short command `mrx [x|y|z] [file]`
+    - Transmit commands: `modem tx [x|y|z] <file>` or short command `mtx [x|y|z] <file>`
   - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
@@ -34,13 +34,13 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 │       ├── crc.h                  # Zephyr sys/crc.h wrapper functions
 │       ├── xmodem.h               # XMODEM protocol API definition
 │       ├── ymodem.h               # YMODEM protocol API definition
-│       ├── zmodem.h               # ZMODEM protocol API definition
-│       └── zephyr_console_modem.h # Zephyr console & shell integration
+│       └── zmodem.h               # ZMODEM protocol API definition
 ├── src/
 │   ├── crc.c                      # Checksum implementation
 │   ├── xmodem.c                   # XMODEM state machine and transfers
 │   ├── ymodem.c                   # YMODEM state machine and transfers
 │   ├── zmodem.c                   # ZMODEM state machine and transfers
+│   ├── zephyr_console_modem.h     # Console modem internal definitions
 │   └── zephyr_console_modem.c     # Zephyr console and shell binding
 ├── tests/                         # Zephyr ztest / Twister test suite
 │   ├── src/
