@@ -5,27 +5,24 @@ This repository provides full implementations of the standard serial file transf
 ## Features
 
 - **XMODEM Protocol**:
-  - Support for Standard 128-byte block mode with 8-bit arithmetic checksum.
-  - Support for XMODEM-CRC (128-byte block with 16-bit CRC CCITT).
-  - Support for XMODEM-1K (1024-byte block with 16-bit CRC CCITT).
+  - Receiver and Transmitter supporting standard 128-byte block mode with 8-bit checksum, XMODEM-CRC (128-byte block), and XMODEM-1K (1024-byte block).
   - Handles packet timeouts, retransmissions, sequence errors, and cancellation.
 
 - **YMODEM Protocol**:
-  - Batch file transfer support.
+  - Batch file upload and download support.
   - Header block (Block 0) parsing for filename and file size in decimal ASCII.
   - Multi-file sequencing with double EOT handshaking and null block termination.
 
 - **ZMODEM Protocol**:
-  - High-performance streaming file transfers.
+  - High-performance streaming file uploads and downloads.
   - Support for HEX, BIN16, and ZDLE escape sequence processing.
-  - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, and `ZFIN`.
+  - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` position offsets.
 
 - **Zephyr OS Console & Shell Integration**:
   - Zephyr shell commands registered under `modem`:
-    - `modem rx [file]` / `rx [file]`
-    - `modem ry [file]` / `ry [file]`
-    - `modem rz [file]` / `rz [file]`
-  - Standardized transport and storage callbacks for seamless integration with Zephyr console UART driver and file systems.
+    - Receive commands: `modem rx [file]`, `modem ry [file]`, `modem rz [file]` (aliases: `rx`, `ry`, `rz`)
+    - Transmit commands: `modem sx <file>`, `modem sy <file>`, `modem sz <file>` (aliases: `sx`, `sy`, `sz`)
+  - Integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
 
@@ -63,12 +60,14 @@ To use this module in a Zephyr application:
    ```kconfig
    CONFIG_SHELL=y
    CONFIG_CONSOLE=y
+   CONFIG_FILE_SYSTEM=y
+   CONFIG_CRC=y
    CONFIG_MODEM_CONSOLE=y
    CONFIG_MODEM_XMODEM=y
    CONFIG_MODEM_YMODEM=y
    CONFIG_MODEM_ZMODEM=y
    ```
-3. Use terminal tools like `sx` / `sb` / `sz`, `extraputty`, `minicom`, or `Tera Term` to transfer files directly via the Zephyr shell console.
+3. Use terminal tools like `sx` / `sb` / `sz` or `rx` / `rb` / `rz` (from `lrzsz` or Minicom) to upload and download files directly over the Zephyr shell console.
 
 ## Building and Running Unit Tests
 
@@ -79,5 +78,3 @@ cmake -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
-
-All unit tests cover CRC calculation, XMODEM single/multi-block receive, YMODEM file header parsing, and ZMODEM frame handshake sequences.

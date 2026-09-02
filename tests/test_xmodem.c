@@ -58,6 +58,14 @@ static int mock_rx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len, v
     return 0;
 }
 
+static int mock_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void *user_data)
+{
+    (void)block_num;
+    (void)user_data;
+    memset(buf, 'A', len);
+    return 0;
+}
+
 void test_xmodem_receive_single_128_crc_packet(void)
 {
     loopback_pipe_t pipe = {0};
@@ -85,7 +93,7 @@ void test_xmodem_receive_single_128_crc_packet(void)
     pkt[132] = (uint8_t)(crc & 0xFF);
 
     pipe_write_to_rx(&pipe, pkt, sizeof(pkt));
-    /* Also write EOT for after block 1 */
+    /* Write EOT */
     uint8_t eot = XMODEM_EOT;
     pipe_write_to_rx(&pipe, &eot, 1);
 
@@ -100,7 +108,6 @@ void test_xmodem_receive_single_128_crc_packet(void)
     assert(total_payload_received == 128);
     assert(memcmp(received_payload, block, 128) == 0);
 
-    /* Check response in tx_buf: Should contain 'C' (handshake) then ACK (block 1) then ACK (EOT) */
     assert(pipe.tx_buf[0] == XMODEM_C);
     assert(pipe.tx_buf[1] == XMODEM_ACK);
     assert(pipe.tx_buf[2] == XMODEM_ACK);
@@ -108,9 +115,37 @@ void test_xmodem_receive_single_128_crc_packet(void)
     printf("[PASS] test_xmodem_receive_single_128_crc_packet\n");
 }
 
+void test_xmodem_transmit_single_packet(void)
+{
+    loopback_pipe_t pipe = {0};
+
+    xmodem_callbacks_t cbs = {
+        .read_byte = mock_rx_read_byte,
+        .write_bytes = mock_rx_write_bytes,
+        .data_cb = (int (*)(uint32_t, const uint8_t *, size_t, void *))mock_tx_data_cb,
+        .user_data = &pipe
+    };
+
+    /* Feed 'C' for handshake start and ACK for block 1 and ACK for EOT into rx buffer */
+    uint8_t rx_responses[] = { XMODEM_C, XMODEM_ACK, XMODEM_ACK };
+    pipe_write_to_rx(&pipe, rx_responses, sizeof(rx_responses));
+
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+    cfg.mode = XMODEM_MODE_CRC;
+
+    xmodem_status_t status = xmodem_transmit(&cbs, 128, &cfg);
+    assert(status == XMODEM_OK);
+    assert(pipe.tx_head > 0);
+    assert(pipe.tx_buf[0] == XMODEM_SOH);
+
+    printf("[PASS] test_xmodem_transmit_single_packet\n");
+}
+
 int main(void)
 {
     test_xmodem_receive_single_128_crc_packet();
+    test_xmodem_transmit_single_packet();
     printf("All XMODEM tests passed!\n");
     return 0;
 }
