@@ -22,7 +22,6 @@ jobs:
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
           app-path: '.'
-          toolchains: zephyr
 
       - name: Build and Run Twister Test Suite
         run: |
