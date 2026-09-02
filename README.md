@@ -38,6 +38,8 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Configurable file storage policy (`CONFIG_MODEM_FILE_OVERWRITE_MODE`, `CONFIG_MODEM_DEFAULT_TARGET_DIR`, `CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`).
   - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
+---
+
 ## Project Structure
 
 ```
@@ -56,7 +58,8 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 │   └── zephyr_console_modem.c     # Zephyr console and shell binding
 ├── docs/                          # Detailed Guides
 │   ├── cli.md                     # Shell Command Line Interface (CLI) Guide
-│   └── developer_guide.md         # Developer C API Integration Guide
+│   ├── developer_guide.md         # Developer C API Integration Guide
+│   └── protocols.md               # Technical Protocol Specifications & Sequence Diagrams
 ├── tests/                         # Zephyr ztest / Twister test suite
 │   ├── src/
 │   │   └── main.c                 # ztest protocol test cases
@@ -120,10 +123,11 @@ When `CONFIG_MODEM_CONSOLE=y` and `CONFIG_FILE_SYSTEM=y` are enabled, the follow
 - **Transmit File (Download from Zephyr)**:
   `modem tx [x|y|z] <file>` or short alias `mtx [x|y|z] <file>`
 - **Modem Configuration**:
-  `modem config [packet_timeout|byte_timeout|max_retries <val>]`
+  `modem config [param val]`
 
 For full command line usage instructions, see [docs/cli.md](docs/cli.md).
 For developer C API integration examples, see [docs/developer_guide.md](docs/developer_guide.md).
+For technical specifications and sequence diagrams, see [docs/protocols.md](docs/protocols.md).
 
 ---
 

@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk> -->
 
-# Console Shell Command Line Interface (CLI) & Protocol Reference Guide
+# Console Shell Command Line Interface (CLI) Guide
 
-This guide provides a comprehensive user manual, Kconfig configuration reference, and technical breakdown for the Zephyr OS Console Modem protocols (XMODEM, YMODEM, ZMODEM).
+This guide provides a comprehensive user manual, Kconfig configuration reference, and parameter access guide for the Zephyr OS Console Modem protocols (XMODEM, YMODEM, ZMODEM).
+
+For full technical specifications, packet formats, and sequence diagrams, refer to [docs/protocols.md](protocols.md).
 
 ---
 
@@ -85,82 +87,3 @@ Modem Configuration:
 | `sync_interval` | **Read/Write** | Flash `fs_sync()` interval in blocks (0 = at file end) |
 | *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
 | *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |
-
----
-
-## 4. Technical Protocol Breakdown & Sequence Diagrams
-
-### 4.1. XMODEM Protocol
-
-XMODEM is a stop-and-wait block protocol.
-* **Packet Layout**:
-  `[ Header (SOH/STX) | Block # | ~Block # | Data Payload (128/1024 B) | CRC16 (2 B) or Checksum (1 B) ]`
-
-```
-  Host (Sender)                             Zephyr Target (Receiver)
-       |                                                |
-       | <------------------- 'C' (Request CRC) ------- |  (Handshake)
-       |                                                |
-       | --- [SOH | 0x01 | 0xFE | Payload128 | CRC] --> |  (Block 1)
-       | <------------------- ACK --------------------- |
-       |                                                |
-       | --- [STX | 0x02 | 0xFD | Payload1024 | CRC] -> |  (Block 2)
-       | <------------------- ACK --------------------- |
-       |                                                |
-       | -------------------- EOT --------------------> |  (End of File)
-       | <------------------- ACK --------------------- |
-```
-
----
-
-### 4.2. YMODEM Protocol
-
-YMODEM extends XMODEM-1K to support batch transfers and file metadata in **Block 0**.
-* **Block 0 Layout**:
-  `[ SOH | 0x00 | 0xFF | <Filename>\0<File Length in Decimal ASCII>\0... | CRC16 ]`
-
-```
-  Host (Sender)                             Zephyr Target (Receiver)
-       |                                                |
-       | <------------------- 'C' --------------------- |
-       | --- [SOH | 0x00 | 0xFF | "file.bin\01234" ...] ->| (Block 0 Header)
-       | <------------------- ACK --------------------- |
-       | <------------------- 'C' --------------------- | (Start Data)
-       |                                                |
-       | --- [STX | 0x01 | 0xFE | Payload1024 | CRC] -> | (Block 1)
-       | <------------------- ACK --------------------- |
-       |                                                |
-       | -------------------- EOT --------------------> | (EOT 1)
-       | <------------------- NAK --------------------- | (YMODEM NAK)
-       | -------------------- EOT --------------------> | (EOT 2)
-       | <------------------- ACK --------------------- |
-       |                                                |
-       | <------------------- 'C' --------------------- | (Request next file)
-       | --- [SOH | 0x00 | 0xFF | Null 128B | CRC] ---> | (Empty Block 0 = End)
-       | <------------------- ACK --------------------- |
-```
-
----
-
-### 4.3. ZMODEM Protocol
-
-ZMODEM is a full-duplex streaming protocol using ZDLE escaping and HEX/BIN header frames.
-
-```
-  Host (Sender)                             Zephyr Target (Receiver)
-       |                                                |
-       | <------------------- * * ZDLE ZHEX ZRINIT ---- | (Receiver Init)
-       | --- * * ZDLE ZBIN ZFILE [filename size] ------> | (File Header)
-       | <------------------- * * ZDLE ZHEX ZRPOS 0 --- | (Resume Offset 0)
-       |                                                |
-       | --- * * ZDLE ZBIN ZDATA [Offset 0] -----------> | (Data Header)
-       | --- [Data Subpacket 1] ZDLE ZCRCG [CRC] ------> | (Stream Data)
-       | --- [Data Subpacket 2] ZDLE ZCRCW [CRC] ------> | (End Data Frame)
-       |                                                |
-       | --- * * ZDLE ZHEX ZEOF [File Size] -----------> | (End of File)
-       | <------------------- * * ZDLE ZHEX ZRINIT ---- | (ACK / Next File)
-       |                                                |
-       | --- * * ZDLE ZHEX ZFIN ----------------------> | (Finish Session)
-       | <------------------- * * ZDLE ZHEX ZFIN ------ |
-       | --- "OO" ------------------------------------> | (Over and Out)
-```
