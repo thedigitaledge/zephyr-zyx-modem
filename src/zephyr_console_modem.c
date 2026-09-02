@@ -27,6 +27,7 @@
 #include <stdlib.h>
 
 #include <zephyr/kernel.h>
+#include <zephyr/sys/util.h>
 #include <zephyr/sys/ring_buffer.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/console/console.h>
@@ -58,10 +59,6 @@
 #define CONFIG_MODEM_FILE_OVERWRITE_MODE 0
 #endif
 
-#if !defined(CONFIG_MODEM_ENABLE_RESUME)
-#define CONFIG_MODEM_ENABLE_RESUME 1
-#endif
-
 #if !defined(CONFIG_MODEM_DEFAULT_TARGET_DIR)
 #define CONFIG_MODEM_DEFAULT_TARGET_DIR ""
 #endif
@@ -70,60 +67,8 @@
 #define CONFIG_MODEM_SYNC_INTERVAL_BLOCKS 10
 #endif
 
-#if !defined(CONFIG_MODEM_AUTO_START)
-#define CONFIG_MODEM_AUTO_START 1
-#endif
-
-#if !defined(CONFIG_MODEM_ASYNC_STORAGE)
-#define CONFIG_MODEM_ASYNC_STORAGE 1
-#endif
-
-#if !defined(CONFIG_MODEM_PROGRESS_BAR)
-#define CONFIG_MODEM_PROGRESS_BAR 1
-#endif
-
-#if !defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
-#define CONFIG_MODEM_DIRECTORY_TRANSFERS 1
-#endif
-
-#if !defined(CONFIG_MODEM_RING_BUFFER)
-#define CONFIG_MODEM_RING_BUFFER 1
-#endif
-
-#if !defined(CONFIG_MODEM_ABORT_KEY)
-#define CONFIG_MODEM_ABORT_KEY 1
-#endif
-
 #if !defined(CONFIG_MODEM_ABORT_KEY_CHAR)
 #define CONFIG_MODEM_ABORT_KEY_CHAR 3
-#endif
-
-#if !defined(CONFIG_MODEM_FLOW_CONTROL)
-#define CONFIG_MODEM_FLOW_CONTROL 1
-#endif
-
-#if !defined(CONFIG_MODEM_MCUBOOT_UPDATE)
-#define CONFIG_MODEM_MCUBOOT_UPDATE 1
-#endif
-
-#if !defined(CONFIG_MODEM_NVS_CHECKPOINTS)
-#define CONFIG_MODEM_NVS_CHECKPOINTS 1
-#endif
-
-#if !defined(CONFIG_MODEM_CRYPTO_STREAM)
-#define CONFIG_MODEM_CRYPTO_STREAM 0
-#endif
-
-#if !defined(CONFIG_MODEM_UART_DMA)
-#define CONFIG_MODEM_UART_DMA 1
-#endif
-
-#if !defined(CONFIG_MODEM_USB_CDC_ACM)
-#define CONFIG_MODEM_USB_CDC_ACM 1
-#endif
-
-#if !defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
-#define CONFIG_MODEM_MCUBOOT_VALIDATE 1
 #endif
 
 /* Runtime Modem Configuration */
@@ -134,24 +79,29 @@ static console_modem_settings_t g_modem_settings = {
     .inter_block_delay_ms = CONFIG_MODEM_INTER_BLOCK_DELAY_MS,
     .handshake_delay_ms = CONFIG_MODEM_HANDSHAKE_DELAY_MS,
     .overwrite_mode = (modem_overwrite_mode_t)CONFIG_MODEM_FILE_OVERWRITE_MODE,
-    .enable_resume = CONFIG_MODEM_ENABLE_RESUME,
+    .enable_resume = IS_ENABLED(CONFIG_MODEM_ENABLE_RESUME),
     .default_target_dir = CONFIG_MODEM_DEFAULT_TARGET_DIR,
     .sync_interval_blocks = CONFIG_MODEM_SYNC_INTERVAL_BLOCKS,
-    .auto_start = CONFIG_MODEM_AUTO_START,
-    .async_storage = CONFIG_MODEM_ASYNC_STORAGE,
-    .progress_bar = CONFIG_MODEM_PROGRESS_BAR,
-    .directory_transfers = CONFIG_MODEM_DIRECTORY_TRANSFERS,
-    .ring_buffer = CONFIG_MODEM_RING_BUFFER,
-    .abort_key = CONFIG_MODEM_ABORT_KEY,
+    .auto_start = IS_ENABLED(CONFIG_MODEM_AUTO_START),
+    .async_storage = IS_ENABLED(CONFIG_MODEM_ASYNC_STORAGE),
+    .progress_bar = IS_ENABLED(CONFIG_MODEM_PROGRESS_BAR),
+    .directory_transfers = IS_ENABLED(CONFIG_MODEM_DIRECTORY_TRANSFERS),
+    .ring_buffer = IS_ENABLED(CONFIG_MODEM_RING_BUFFER),
+    .abort_key = IS_ENABLED(CONFIG_MODEM_ABORT_KEY),
     .abort_key_char = CONFIG_MODEM_ABORT_KEY_CHAR,
-    .flow_control = CONFIG_MODEM_FLOW_CONTROL,
+    .flow_control = IS_ENABLED(CONFIG_MODEM_FLOW_CONTROL),
     .flash_partition = "",
-    .mcuboot_update = CONFIG_MODEM_MCUBOOT_UPDATE,
-    .nvs_checkpoints = CONFIG_MODEM_NVS_CHECKPOINTS,
-    .crypto_stream = CONFIG_MODEM_CRYPTO_STREAM,
-    .uart_dma = CONFIG_MODEM_UART_DMA,
-    .usb_cdc_acm = CONFIG_MODEM_USB_CDC_ACM,
-    .mcuboot_validate = CONFIG_MODEM_MCUBOOT_VALIDATE
+    .mcuboot_update = IS_ENABLED(CONFIG_MODEM_MCUBOOT_UPDATE),
+    .nvs_checkpoints = IS_ENABLED(CONFIG_MODEM_NVS_CHECKPOINTS),
+    .crypto_stream = IS_ENABLED(CONFIG_MODEM_CRYPTO_STREAM),
+    .uart_dma = IS_ENABLED(CONFIG_MODEM_UART_DMA),
+    .usb_cdc_acm = IS_ENABLED(CONFIG_MODEM_USB_CDC_ACM),
+    .mcuboot_validate = IS_ENABLED(CONFIG_MODEM_MCUBOOT_VALIDATE),
+    .signature_verify = IS_ENABLED(CONFIG_MODEM_SIGNATURE_VERIFY),
+    .encrypted_envelope = IS_ENABLED(CONFIG_MODEM_ENCRYPTED_STREAM),
+    .session_dispatcher = IS_ENABLED(CONFIG_MODEM_SESSION_DISPATCHER),
+    .log_rotation = IS_ENABLED(CONFIG_MODEM_LOG_ROTATION),
+    .nfc_transport = IS_ENABLED(CONFIG_MODEM_NFC)
 };
 
 int console_modem_setup_usb_cdc_acm(void)
@@ -226,6 +176,7 @@ struct async_storage_work_t {
 };
 
 static struct async_storage_work_t g_async_work;
+static struct k_work_sync g_async_sync;
 
 static void async_write_handler(struct k_work *work)
 {
@@ -258,24 +209,36 @@ bool console_modem_check_autostart(uint8_t byte)
 }
 
 /**
- * Console byte read helper with Abort Key monitoring.
+ * Console byte read helper with Abort Key monitoring and timeout polling.
  */
 static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 {
-    (void)timeout_ms;
     (void)user_data;
-    uint8_t b;
+    uint8_t b = 0;
+    bool got_byte = false;
 
-    if (g_modem_settings.ring_buffer && !ring_buf_is_empty(&g_uart_ring_buf)) {
-        if (ring_buf_get(&g_uart_ring_buf, &b, 1) != 1) {
-            return -1;
+    int64_t start = k_uptime_get();
+    uint32_t wait_limit = (timeout_ms == 0) ? 1 : timeout_ms;
+
+    while (k_uptime_get() - start <= wait_limit) {
+        if (g_modem_settings.ring_buffer && !ring_buf_is_empty(&g_uart_ring_buf)) {
+            if (ring_buf_get(&g_uart_ring_buf, &b, 1) == 1) {
+                got_byte = true;
+                break;
+            }
+        } else {
+            int ch = console_getchar();
+            if (ch >= 0) {
+                b = (uint8_t)ch;
+                got_byte = true;
+                break;
+            }
         }
-    } else {
-        int ch = console_getchar();
-        if (ch < 0) {
-            return -1;
-        }
-        b = (uint8_t)ch;
+        k_msleep(10);
+    }
+
+    if (!got_byte) {
+        return -1;
     }
 
     if (g_modem_settings.abort_key) {
@@ -402,7 +365,7 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
         g_async_work.res = -1;
 
         k_work_submit(&g_async_work.work_item);
-        k_work_flush(&g_async_work.work_item, NULL);
+        k_work_flush(&g_async_work.work_item, &g_async_sync);
         res = g_async_work.res;
     } else {
         res = fs_write(&ctx->zfile, buf, len);
@@ -449,12 +412,13 @@ static int xmodem_rx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len,
     return ctx ? write_file_data(ctx, buf, len) : -1;
 }
 
-static int xmodem_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void *user_data)
+static int xmodem_tx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len, void *user_data)
 {
+    (void)block_num;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
     if (!ctx) return -1;
     size_t offset = ctx->bytes_transferred;
-    int read_b = read_file_data(ctx, offset, buf, len);
+    int read_b = read_file_data(ctx, offset, (uint8_t *)buf, len);
     if (read_b > 0) {
         ctx->bytes_transferred += (size_t)read_b;
     }
@@ -675,7 +639,7 @@ int console_modem_tx_xmodem(const char *input_filename)
     xmodem_callbacks_t cbs = {
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
-        .data_cb = (int (*)(uint32_t, const uint8_t *, size_t, void *))xmodem_tx_data_cb,
+        .data_cb = xmodem_tx_data_cb,
         .user_data = &ctx
     };
 
@@ -748,7 +712,6 @@ int console_modem_tx_zmodem(const char *input_filename)
 
 int console_modem_tx_directory(const char *dir_path, int protocol)
 {
-#if defined(CONFIG_FILE_SYSTEM)
     if (!g_modem_settings.directory_transfers || !dir_path) return -1;
 
     struct fs_dir_t dir;
@@ -771,11 +734,6 @@ int console_modem_tx_directory(const char *dir_path, int protocol)
     }
     fs_closedir(&dir);
     return 0;
-#else
-    (void)dir_path;
-    (void)protocol;
-    return -1;
-#endif
 }
 
 int console_modem_mcuboot_update(const char *output_filename, int protocol)

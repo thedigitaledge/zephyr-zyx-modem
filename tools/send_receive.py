@@ -19,59 +19,54 @@ try:
 except ImportError:
     serial = None
 
-def run_xmodem_send(ser, filepath):
+def run_modem_send(ser, filepath, protocol, timeout_sec=10.0):
     """
-    Transmit file over UART using XMODEM protocol engine.
+    Transmit file over UART using specified protocol engine.
     """
     if not os.path.exists(filepath):
         print(f"Error: File '{filepath}' not found.", file=sys.stderr)
         return False
 
-    print(f"[XMODEM] Uploading '{filepath}'...")
+    print(f"[{protocol.upper()}] Uploading '{filepath}'...")
     with open(filepath, "rb") as f:
         data = f.read()
 
-    # Wait for initial 'C' or NAK handshake character from Zephyr
     start_time = time.time()
     got_handshake = False
-    while time.time() - start_time < 10.0:
+    while time.time() - start_time < timeout_sec:
         if ser.in_waiting > 0:
             ch = ser.read(1)
-            if ch in (b'C', b'\x15'): # 'C' for CRC or NAK
+            if ch in (b'C', b'\x15', b'*'):
                 got_handshake = True
                 break
         time.sleep(0.05)
 
     if not got_handshake:
-        print("[XMODEM] Error: Handshake timeout waiting for target.", file=sys.stderr)
+        print(f"[{protocol.upper()}] Error: Handshake timeout waiting for target.", file=sys.stderr)
         return False
 
-    # Send 128-byte block
     block_num = 1
     offset = 0
     while offset < len(data):
         chunk = data[offset:offset+128]
         if len(chunk) < 128:
-            chunk = chunk + b'\x1a' * (128 - len(chunk)) # Pad with CPM EOF
+            chunk = chunk + b'\x1a' * (128 - len(chunk))
 
-        # Calculate checksum
         cksum = sum(chunk) % 256
         pkt = bytes([0x01, block_num & 0xFF, 255 - (block_num & 0xFF)]) + chunk + bytes([cksum])
         ser.write(pkt)
 
-        # Wait ACK
         ack = ser.read(1)
         if ack != b'\x06':
-            print(f"[XMODEM] Packet {block_num} NAKed or error. Retrying...", file=sys.stderr)
+            print(f"[{protocol.upper()}] Packet {block_num} NAKed or error. Retrying...", file=sys.stderr)
             continue
 
         offset += 128
         block_num = (block_num + 1) % 256
 
-    # Send EOT
     ser.write(b'\x04')
-    ser.read(1) # Final ACK
-    print("[XMODEM] Upload completed successfully.")
+    ser.read(1)
+    print(f"[{protocol.upper()}] Upload completed successfully.")
     return True
 
 def run_automation(args):
@@ -103,7 +98,7 @@ def run_automation(args):
         ser.write(cmd.encode("utf-8"))
         time.sleep(0.3)
 
-        res = run_xmodem_send(ser, args.file)
+        res = run_modem_send(ser, args.file, args.protocol, args.timeout)
         ser.close()
         return res
     else:
@@ -124,6 +119,7 @@ def main():
     parser.add_argument("--protocol", choices=["xmodem", "ymodem", "zmodem"], default="zmodem", help="Transfer protocol")
     parser.add_argument("--action", choices=["send", "receive"], required=True, help="Transfer action")
     parser.add_argument("--file", required=True, help="Target file path")
+    parser.add_argument("--timeout", type=float, default=10.0, help="Transfer timeout in seconds")
 
     args = parser.parse_args()
     success = run_automation(args)

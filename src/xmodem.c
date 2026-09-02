@@ -91,7 +91,7 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
                 crc_mode = false;
                 req = XMODEM_NAK;
             }
-            send_byte(callbacks, req);
+            send_byte(callbacks, (total_bytes == 0) ? req : XMODEM_NAK);
             continue;
         }
 

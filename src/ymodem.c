@@ -56,8 +56,15 @@ static void parse_block0(const uint8_t *payload, size_t len, ymodem_file_info_t 
 
     size_t pos = name_len + 1;
     if (pos < len && payload[pos] != 0) {
-        /* Parse file length string in decimal ASCII format */
-        info->size = (size_t)strtoul((const char *)&payload[pos], NULL, 10);
+        /* Parse file length string in decimal ASCII format with bounded copy */
+        char num_buf[32] = {0};
+        size_t num_len = strnlen((const char *)&payload[pos], len - pos);
+        if (num_len >= sizeof(num_buf)) {
+            num_len = sizeof(num_buf) - 1;
+        }
+        memcpy(num_buf, &payload[pos], num_len);
+        num_buf[num_len] = '\0';
+        info->size = (size_t)strtoul(num_buf, NULL, 10);
     }
 }
 

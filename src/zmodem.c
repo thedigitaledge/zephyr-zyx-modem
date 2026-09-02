@@ -378,6 +378,8 @@ static int read_subpacket_rx(const zmodem_rx_callbacks_t *cbs, uint8_t *buf, siz
         }
         if (pos < max_len) {
             buf[pos++] = b;
+        } else {
+            return -1; /* Subpacket exceeds buffer capacity */
         }
     }
 }

@@ -322,19 +322,19 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
     zassert_equal(current.overwrite_mode, MODEM_OVERWRITE_ALWAYS, "Default overwrite mode mismatch");
     zassert_equal(current.enable_resume, true, "Default resume setting mismatch");
 
-    console_modem_settings_t updated = {
-        .packet_timeout_ms = 6000,
-        .byte_timeout_ms = 1500,
-        .max_retries = 20,
-        .inter_block_delay_ms = 50,
-        .handshake_delay_ms = 2000,
-        .overwrite_mode = MODEM_OVERWRITE_SKIP,
-        .enable_resume = false,
-        .default_target_dir = "/RAM:",
-        .sync_interval_blocks = 5,
-        .signature_verify = true,
-        .encrypted_envelope = true
-    };
+    console_modem_settings_t updated;
+    console_modem_settings_get(&updated);
+    updated.packet_timeout_ms = 6000;
+    updated.byte_timeout_ms = 1500;
+    updated.max_retries = 20;
+    updated.inter_block_delay_ms = 50;
+    updated.handshake_delay_ms = 2000;
+    updated.overwrite_mode = MODEM_OVERWRITE_SKIP;
+    updated.enable_resume = false;
+    strncpy(updated.default_target_dir, "/RAM:", sizeof(updated.default_target_dir) - 1);
+    updated.sync_interval_blocks = 5;
+    updated.signature_verify = true;
+    updated.encrypted_envelope = true;
     console_modem_settings_set(&updated);
 
     console_modem_settings_get(&current);
