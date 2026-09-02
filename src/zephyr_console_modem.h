@@ -52,7 +52,16 @@ typedef struct {
     bool mcuboot_update;           /**< MCUBoot dual-bank image upgrade manager */
     bool nvs_checkpoints;          /**< NVS / Settings auto-resume checkpoints */
     bool crypto_stream;            /**< In-flight payload streaming encryption */
+    bool uart_dma;                 /**< High-speed zero-copy async UART DMA ring buffer adapter */
+    bool usb_cdc_acm;              /**< USB CDC-ACM virtual serial port adapter */
+    bool mcuboot_validate;         /**< MCUBoot image magic header and slot boundary validation */
 } console_modem_settings_t;
+
+/**
+ * @brief Initialize USB CDC-ACM virtual serial port device channel.
+ * @return 0 on success, negative error code on failure.
+ */
+int console_modem_setup_usb_cdc_acm(void);
 
 /**
  * @brief Stream MCUBoot image update to secondary partition slot.

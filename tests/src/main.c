@@ -14,6 +14,7 @@
 #include "modem/ymodem.h"
 #include "modem/zmodem.h"
 #include "zephyr_console_modem.h"
+#include "mcuboot_validate.h"
 
 /* Loopback pipe helper for mock serial I/O tests */
 #define FIFO_BUF_SIZE 4096
@@ -260,6 +261,18 @@ ZTEST(modem_tests, test_autostart_and_advanced_features)
     console_modem_stats_reset();
     console_modem_stats_get(&stats);
     zassert_equal(stats.total_transfers, 0, "Stats reset failed");
+
+    /* Test MCUBoot Image Header Validation */
+    mcuboot_image_header_t hdr = {
+        .magic = MCUBOOT_IMAGE_MAGIC,
+        .img_size = 1024
+    };
+    int val_res = mcuboot_validate_header((const uint8_t *)&hdr, sizeof(hdr), 2048);
+    zassert_equal(val_res, 0, "MCUBoot header validation failed for valid header");
+
+    hdr.magic = 0x12345678;
+    val_res = mcuboot_validate_header((const uint8_t *)&hdr, sizeof(hdr), 2048);
+    zassert_equal(val_res, -2, "MCUBoot header validation failed to reject bad magic");
 }
 
 ZTEST(modem_tests, test_fault_injection_stress_harness)

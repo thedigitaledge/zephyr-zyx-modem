@@ -114,6 +114,18 @@
 #define CONFIG_MODEM_CRYPTO_STREAM 0
 #endif
 
+#if !defined(CONFIG_MODEM_UART_DMA)
+#define CONFIG_MODEM_UART_DMA 1
+#endif
+
+#if !defined(CONFIG_MODEM_USB_CDC_ACM)
+#define CONFIG_MODEM_USB_CDC_ACM 1
+#endif
+
+#if !defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
+#define CONFIG_MODEM_MCUBOOT_VALIDATE 1
+#endif
+
 /* Runtime Modem Configuration */
 static console_modem_settings_t g_modem_settings = {
     .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
@@ -136,8 +148,16 @@ static console_modem_settings_t g_modem_settings = {
     .flash_partition = "",
     .mcuboot_update = CONFIG_MODEM_MCUBOOT_UPDATE,
     .nvs_checkpoints = CONFIG_MODEM_NVS_CHECKPOINTS,
-    .crypto_stream = CONFIG_MODEM_CRYPTO_STREAM
+    .crypto_stream = CONFIG_MODEM_CRYPTO_STREAM,
+    .uart_dma = CONFIG_MODEM_UART_DMA,
+    .usb_cdc_acm = CONFIG_MODEM_USB_CDC_ACM,
+    .mcuboot_validate = CONFIG_MODEM_MCUBOOT_VALIDATE
 };
+
+int console_modem_setup_usb_cdc_acm(void)
+{
+    return 0;
+}
 
 static console_modem_channel_t *g_active_channel = NULL;
 
@@ -893,6 +913,9 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  MCUBoot Update:      %s", g_modem_settings.mcuboot_update ? "true" : "false");
         shell_print(sh, "  NVS Checkpoints:     %s", g_modem_settings.nvs_checkpoints ? "true" : "false");
         shell_print(sh, "  Crypto Stream:       %s", g_modem_settings.crypto_stream ? "true" : "false");
+        shell_print(sh, "  UART DMA Adapter:    %s", g_modem_settings.uart_dma ? "true" : "false");
+        shell_print(sh, "  USB CDC-ACM Adapter: %s", g_modem_settings.usb_cdc_acm ? "true" : "false");
+        shell_print(sh, "  MCUBoot Validate:    %s", g_modem_settings.mcuboot_validate ? "true" : "false");
         return 0;
     }
 
@@ -966,6 +989,15 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "crypto_stream") == 0) {
             g_modem_settings.crypto_stream = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Crypto stream set to %s", g_modem_settings.crypto_stream ? "true" : "false");
+        } else if (strcmp(param, "uart_dma") == 0) {
+            g_modem_settings.uart_dma = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "UART DMA adapter set to %s", g_modem_settings.uart_dma ? "true" : "false");
+        } else if (strcmp(param, "usb_cdc_acm") == 0) {
+            g_modem_settings.usb_cdc_acm = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "USB CDC-ACM adapter set to %s", g_modem_settings.usb_cdc_acm ? "true" : "false");
+        } else if (strcmp(param, "mcuboot_validate") == 0) {
+            g_modem_settings.mcuboot_validate = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "MCUBoot validation set to %s", g_modem_settings.mcuboot_validate ? "true" : "false");
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;

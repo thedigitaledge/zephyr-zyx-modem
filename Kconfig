@@ -133,6 +133,26 @@ config MODEM_FLASH_HELPER
 	help
 	  Enable sector-by-sector erasing prior to raw flash partition writes.
 
+config MODEM_UART_DMA
+	bool "High-Speed Async UART DMA Ring Buffer Adapter"
+	default y
+	depends on UART_ASYNC_API
+	help
+	  Enable zero-copy async UART DMA ring buffer adapter using Zephyr uart_callback_set API.
+
+config MODEM_USB_CDC_ACM
+	bool "USB CDC-ACM Virtual Serial Port Channel Adapter"
+	default y
+	depends on USB_DEVICE_STACK
+	help
+	  Enable pre-configured USB CDC-ACM virtual serial port bridge for dedicated file transfers.
+
+config MODEM_MCUBOOT_VALIDATE
+	bool "MCUBoot Image Magic & Slot Boundary Validation Helper"
+	default y
+	help
+	  Validate MCUBoot image magic headers (0x96F3B83D) and size limits prior to flash writing.
+
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"
 	default 3000

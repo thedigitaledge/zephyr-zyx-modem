@@ -73,5 +73,8 @@ Modem Configuration:
 | `mcuboot_update` | **Read/Write** | MCUBoot firmware upgrade manager toggle (`true`/`false`) |
 | `nvs_checkpoints` | **Read/Write** | NVS transfer auto-resume checkpoint toggle (`true`/`false`) |
 | `crypto_stream` | **Read/Write** | In-flight payload streaming encryption toggle (`true`/`false`) |
+| `uart_dma` | **Read/Write** | High-speed zero-copy async UART DMA adapter toggle (`true`/`false`) |
+| `usb_cdc_acm` | **Read/Write** | USB CDC-ACM virtual serial port adapter toggle (`true`/`false`) |
+| `mcuboot_validate` | **Read/Write** | MCUBoot image header magic and slot validation toggle (`true`/`false`) |
 | *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
 | *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |

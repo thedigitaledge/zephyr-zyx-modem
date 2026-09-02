@@ -30,6 +30,9 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
 - **Advanced Features & Console Enhancements**:
+  - **High-Speed Async UART DMA Adapter** (`CONFIG_MODEM_UART_DMA`): Zero-copy async UART DMA ring buffer adapter using `uart_callback_set` API.
+  - **USB CDC-ACM Virtual Serial Port** (`CONFIG_MODEM_USB_CDC_ACM`): Pre-configured USB CDC-ACM virtual serial port bridge for dedicated file transfers.
+  - **MCUBoot Image Validation Helper** (`CONFIG_MODEM_MCUBOOT_VALIDATE`): MCUBoot image magic header (`0x96F3B83D`) and slot boundary validator.
   - **Transfer Diagnostics & Counter Metrics** (`CONFIG_MODEM_STATS`): In-memory tracking of transfers, CRC errors, retries, and bytes via `modem stats`.
   - **Adaptive Pacing & Dynamic Backoff** (`CONFIG_MODEM_ADAPTIVE_PACING`): Dynamic inter-block delay backoff and block size adjustment on noisy links.
   - **Host Automation Python Utility** (`tools/send_receive.py`): Python host-side tool for automated UART serial transfers.
@@ -145,6 +148,9 @@ CONFIG_MODEM_NVS_CHECKPOINTS=y
 CONFIG_MODEM_STRESS_TEST=y
 CONFIG_MODEM_STATS=y
 CONFIG_MODEM_ADAPTIVE_PACING=y
+CONFIG_MODEM_UART_DMA=y
+CONFIG_MODEM_USB_CDC_ACM=y
+CONFIG_MODEM_MCUBOOT_VALIDATE=y
 ```
 
 ---

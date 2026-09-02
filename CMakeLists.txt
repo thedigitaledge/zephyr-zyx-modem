@@ -6,7 +6,7 @@
 zephyr_include_directories(include)
 
 zephyr_library()
-zephyr_library_sources(src/crc.c)
+zephyr_library_sources(src/crc.c src/modem_flash_helper.c src/mcuboot_validate.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_XMODEM src/xmodem.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_YMODEM src/ymodem.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_ZMODEM src/zmodem.c)
