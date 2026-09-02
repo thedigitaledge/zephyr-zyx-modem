@@ -35,6 +35,9 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - **Wireless & Alternative Transport Adapters**: BLE Nordic UART Service (NUS) transport (`CONFIG_MODEM_BLE_NUS`) and BSD Network Socket stream transport (`CONFIG_MODEM_NET_SOCKET`).
   - **Payload Optimization & Compression**: Stream decompression engine for Heatshrink/RLE payloads (`CONFIG_MODEM_DECOMPRESS`) and in-place binary delta patching engine (`CONFIG_MODEM_DELTA_UPDATE`).
   - **Firmware Integrity & Cryptographic Security**: Streaming signature verification (`CONFIG_MODEM_SIGNATURE_VERIFY`) and encrypted stream envelope (`CONFIG_MODEM_ENCRYPTED_STREAM`).
+  - **Multi-Session Channel Dispatcher**: Concurrent transport session dispatching across multiple interfaces (`CONFIG_MODEM_SESSION_DISPATCHER`).
+  - **Storage Wear-Aware Log Rotation**: Automated log chunking and sector wear balancing (`CONFIG_MODEM_LOG_ROTATION`).
+  - **Automated CI/CD Hardware Flashing**: Ready-to-use GitHub Action workflow (`.github/workflows/flash_hardware.yml`).
   - **MCUBoot Image Validation Helper** (`CONFIG_MODEM_MCUBOOT_VALIDATE`): MCUBoot image magic header (`0x96F3B83D`) and slot boundary validator.
   - **Transfer Diagnostics & Counter Metrics** (`CONFIG_MODEM_STATS`): In-memory tracking of transfers, CRC errors, retries, and bytes via `modem stats`.
   - **Adaptive Pacing & Dynamic Backoff** (`CONFIG_MODEM_ADAPTIVE_PACING`): Dynamic inter-block delay backoff and block size adjustment on noisy links.
@@ -68,7 +71,9 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 │       ├── ble_nus_transport.h    # BLE NUS transport interface
 │       ├── delta_update.h         # Binary delta update patch engine
 │       ├── encrypted_stream.h     # Encrypted transport envelope
+│       ├── log_rotation.h         # Wear-aware log rotation and chunking
 │       ├── net_socket_transport.h # BSD network socket transport wrapper
+│       ├── session_dispatcher.h   # Multi-session channel dispatcher
 │       ├── signature_verify.h     # Cryptographic signature verification
 │       ├── stream_decompress.h    # Stream decompression engine
 │       ├── xmodem.h               # XMODEM protocol API definition

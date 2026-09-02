@@ -189,6 +189,18 @@ config MODEM_ENCRYPTED_STREAM
 	help
 	  Enable session-level authenticated stream encryption/decryption envelope.
 
+config MODEM_SESSION_DISPATCHER
+	bool "Multi-Session Transport Dispatcher & Multiplexing"
+	default y
+	help
+	  Enable concurrent transfer channel dispatcher across multiple interfaces.
+
+config MODEM_LOG_ROTATION
+	bool "Storage Wear-Aware Log Chunking & Rotation"
+	default y
+	help
+	  Enable flash sector wear-aware log chunking and automated rotation.
+
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"
 	default 3000

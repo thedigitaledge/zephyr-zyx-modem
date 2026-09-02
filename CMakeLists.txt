@@ -16,6 +16,8 @@ zephyr_library_sources(
     src/delta_update.c
     src/signature_verify.c
     src/encrypted_stream.c
+    src/session_dispatcher.c
+    src/log_rotation.c
 )
 zephyr_library_sources_ifdef(CONFIG_MODEM_XMODEM src/xmodem.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_YMODEM src/ymodem.c)

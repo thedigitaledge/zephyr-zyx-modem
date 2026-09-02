@@ -20,6 +20,8 @@
 #include "modem/delta_update.h"
 #include "modem/signature_verify.h"
 #include "modem/encrypted_stream.h"
+#include "modem/session_dispatcher.h"
+#include "modem/log_rotation.h"
 #include "zephyr_console_modem.h"
 #include "mcuboot_validate.h"
 
@@ -232,6 +234,39 @@ ZTEST(modem_tests, test_stream_decompress_and_delta_update)
     zassert_equal(res, 0, "Delta patch apply failed");
     zassert_equal(patch_len, 3, "Delta patch produced len mismatch");
     zassert_memequal(patch_out, diff, 3, "Delta patch content mismatch");
+}
+
+ZTEST(modem_tests, test_session_dispatcher_and_log_rotation)
+{
+    session_dispatcher_init();
+    zassert_equal(session_dispatcher_get_active_count(), 0, "Initial active sessions should be 0");
+
+    int id1 = session_dispatcher_create(MODEM_CHANNEL_UART);
+    zassert_true(id1 >= 0, "Failed to create session 1");
+    zassert_equal(session_dispatcher_get_active_count(), 1, "Active sessions should be 1");
+
+    int id2 = session_dispatcher_create(MODEM_CHANNEL_BLE_NUS);
+    zassert_true(id2 >= 0, "Failed to create session 2");
+    zassert_equal(session_dispatcher_get_active_count(), 2, "Active sessions should be 2");
+
+    session_dispatcher_close(id1);
+    zassert_equal(session_dispatcher_get_active_count(), 1, "Active sessions after close should be 1");
+
+    log_rotation_ctx_t log_ctx;
+    log_rotation_config_t log_cfg = {
+        .max_chunk_size = 10,
+        .max_total_chunks = 3,
+        .base_filename = "app_log"
+    };
+    log_rotation_init(&log_ctx, &log_cfg);
+
+    char fname[64] = {0};
+    uint8_t data[] = "12345";
+    log_rotation_write(&log_ctx, data, sizeof(data), fname, sizeof(fname));
+    zassert_str_equal(fname, "app_log_0.log", "Log chunk 0 filename mismatch");
+
+    log_rotation_write(&log_ctx, data, 10, fname, sizeof(fname));
+    zassert_str_equal(fname, "app_log_1.log", "Log chunk rotation filename mismatch");
 }
 
 ZTEST(modem_tests, test_signature_and_encryption)

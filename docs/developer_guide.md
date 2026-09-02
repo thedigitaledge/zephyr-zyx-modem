@@ -306,3 +306,5 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_DELTA_UPDATE`** (bool, default `y`): Binary delta update patch application engine.
 * **`CONFIG_MODEM_SIGNATURE_VERIFY`** (bool, default `y`): Firmware cryptographic signature verification.
 * **`CONFIG_MODEM_ENCRYPTED_STREAM`** (bool, default `y`): Encrypted transport stream payload envelope.
+* **`CONFIG_MODEM_SESSION_DISPATCHER`** (bool, default `y`): Multi-session transport channel dispatcher and multiplexer.
+* **`CONFIG_MODEM_LOG_ROTATION`** (bool, default `y`): Flash storage wear-aware log chunking and automated rotation.
