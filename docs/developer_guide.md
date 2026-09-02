@@ -299,3 +299,10 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_NVS_CHECKPOINTS`** (bool, default `y`): Persist transfer progress checkpoints to NVS / Settings subsystem.
 * **`CONFIG_MODEM_CRYPTO_STREAM`** (bool, default `n`): In-flight payload streaming encryption (PSA Crypto / MbedTLS).
 * **`CONFIG_MODEM_STRESS_TEST`** (bool, default `y`): Fault injection test harness helpers for simulating noisy serial lines.
+* **`CONFIG_MODEM_MCUBOOT_VALIDATE`** (bool, default `y`): MCUBoot image magic header (`0x96F3B83D`) and slot boundary validator.
+* **`CONFIG_MODEM_BLE_NUS`** (bool, default `y`): Bluetooth Low Energy Nordic UART Service (NUS) transport adapter.
+* **`CONFIG_MODEM_NET_SOCKET`** (bool, default `y`): TCP BSD network socket stream transport adapter.
+* **`CONFIG_MODEM_DECOMPRESS`** (bool, default `y`): Stream decompression engine (Heatshrink / RLE).
+* **`CONFIG_MODEM_DELTA_UPDATE`** (bool, default `y`): Binary delta update patch application engine.
+* **`CONFIG_MODEM_SIGNATURE_VERIFY`** (bool, default `y`): Firmware cryptographic signature verification.
+* **`CONFIG_MODEM_ENCRYPTED_STREAM`** (bool, default `y`): Encrypted transport stream payload envelope.

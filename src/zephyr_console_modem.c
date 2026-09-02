@@ -916,6 +916,8 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  UART DMA Adapter:    %s", g_modem_settings.uart_dma ? "true" : "false");
         shell_print(sh, "  USB CDC-ACM Adapter: %s", g_modem_settings.usb_cdc_acm ? "true" : "false");
         shell_print(sh, "  MCUBoot Validate:    %s", g_modem_settings.mcuboot_validate ? "true" : "false");
+        shell_print(sh, "  Signature Verify:    %s", g_modem_settings.signature_verify ? "true" : "false");
+        shell_print(sh, "  Encrypted Envelope:  %s", g_modem_settings.encrypted_envelope ? "true" : "false");
         return 0;
     }
 
@@ -998,6 +1000,12 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "mcuboot_validate") == 0) {
             g_modem_settings.mcuboot_validate = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "MCUBoot validation set to %s", g_modem_settings.mcuboot_validate ? "true" : "false");
+        } else if (strcmp(param, "signature_verify") == 0) {
+            g_modem_settings.signature_verify = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Signature verify set to %s", g_modem_settings.signature_verify ? "true" : "false");
+        } else if (strcmp(param, "encrypted_envelope") == 0) {
+            g_modem_settings.encrypted_envelope = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Encrypted envelope set to %s", g_modem_settings.encrypted_envelope ? "true" : "false");
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;

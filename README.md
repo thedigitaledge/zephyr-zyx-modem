@@ -32,6 +32,9 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 - **Advanced Features & Console Enhancements**:
   - **High-Speed Async UART DMA Adapter** (`CONFIG_MODEM_UART_DMA`): Zero-copy async UART DMA ring buffer adapter using `uart_callback_set` API.
   - **USB CDC-ACM Virtual Serial Port** (`CONFIG_MODEM_USB_CDC_ACM`): Pre-configured USB CDC-ACM virtual serial port bridge for dedicated file transfers.
+  - **Wireless & Alternative Transport Adapters**: BLE Nordic UART Service (NUS) transport (`CONFIG_MODEM_BLE_NUS`) and BSD Network Socket stream transport (`CONFIG_MODEM_NET_SOCKET`).
+  - **Payload Optimization & Compression**: Stream decompression engine for Heatshrink/RLE payloads (`CONFIG_MODEM_DECOMPRESS`) and in-place binary delta patching engine (`CONFIG_MODEM_DELTA_UPDATE`).
+  - **Firmware Integrity & Cryptographic Security**: Streaming signature verification (`CONFIG_MODEM_SIGNATURE_VERIFY`) and encrypted stream envelope (`CONFIG_MODEM_ENCRYPTED_STREAM`).
   - **MCUBoot Image Validation Helper** (`CONFIG_MODEM_MCUBOOT_VALIDATE`): MCUBoot image magic header (`0x96F3B83D`) and slot boundary validator.
   - **Transfer Diagnostics & Counter Metrics** (`CONFIG_MODEM_STATS`): In-memory tracking of transfers, CRC errors, retries, and bytes via `modem stats`.
   - **Adaptive Pacing & Dynamic Backoff** (`CONFIG_MODEM_ADAPTIVE_PACING`): Dynamic inter-block delay backoff and block size adjustment on noisy links.
@@ -62,6 +65,12 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 ```
 ├── include/
 │   └── modem/
+│       ├── ble_nus_transport.h    # BLE NUS transport interface
+│       ├── delta_update.h         # Binary delta update patch engine
+│       ├── encrypted_stream.h     # Encrypted transport envelope
+│       ├── net_socket_transport.h # BSD network socket transport wrapper
+│       ├── signature_verify.h     # Cryptographic signature verification
+│       ├── stream_decompress.h    # Stream decompression engine
 │       ├── xmodem.h               # XMODEM protocol API definition
 │       ├── ymodem.h               # YMODEM protocol API definition
 │       └── zmodem.h               # ZMODEM protocol API definition

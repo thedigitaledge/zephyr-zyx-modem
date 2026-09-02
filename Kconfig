@@ -153,6 +153,42 @@ config MODEM_MCUBOOT_VALIDATE
 	help
 	  Validate MCUBoot image magic headers (0x96F3B83D) and size limits prior to flash writing.
 
+config MODEM_BLE_NUS
+	bool "BLE Nordic UART Service (NUS) Modem Transport Adapter"
+	default y
+	help
+	  Enable Bluetooth Low Energy Nordic UART Service (NUS) transport adapter.
+
+config MODEM_NET_SOCKET
+	bool "BSD Network Socket Stream Modem Transport Adapter"
+	default y
+	help
+	  Enable TCP BSD socket stream transport wrapper for network file transfers.
+
+config MODEM_DECOMPRESS
+	bool "Stream Decompression Engine (Heatshrink / RLE)"
+	default y
+	help
+	  Enable in-flight stream decompression for compressed incoming file payloads.
+
+config MODEM_DELTA_UPDATE
+	bool "In-Place Binary Delta Patching Engine"
+	default y
+	help
+	  Enable applying binary diff patches directly during file upload reception.
+
+config MODEM_SIGNATURE_VERIFY
+	bool "Firmware Cryptographic Signature Verification"
+	default y
+	help
+	  Enable streaming digest calculation and cryptographic signature authentication.
+
+config MODEM_ENCRYPTED_STREAM
+	bool "Encrypted Transport Stream Payload Envelope"
+	default y
+	help
+	  Enable session-level authenticated stream encryption/decryption envelope.
+
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"
 	default 3000

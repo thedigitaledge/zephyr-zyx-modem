@@ -55,6 +55,8 @@ typedef struct {
     bool uart_dma;                 /**< High-speed zero-copy async UART DMA ring buffer adapter */
     bool usb_cdc_acm;              /**< USB CDC-ACM virtual serial port adapter */
     bool mcuboot_validate;         /**< MCUBoot image magic header and slot boundary validation */
+    bool signature_verify;         /**< Firmware signature verification */
+    bool encrypted_envelope;       /**< Encrypted stream payload envelope */
 } console_modem_settings_t;
 
 /**

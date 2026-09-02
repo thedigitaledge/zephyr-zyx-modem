@@ -3,7 +3,8 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Zephyr ztest protocol unit test suite covering CRC, XMODEM, YMODEM,
- * ZMODEM, transfer timeouts, transfer failures, and console configuration settings.
+ * ZMODEM, BLE NUS, network sockets, stream decompression, delta patching,
+ * signature verification, encrypted envelopes, and console configuration settings.
  */
 
 #include <zephyr/ztest.h>
@@ -13,6 +14,12 @@
 #include "modem/xmodem.h"
 #include "modem/ymodem.h"
 #include "modem/zmodem.h"
+#include "modem/ble_nus_transport.h"
+#include "modem/net_socket_transport.h"
+#include "modem/stream_decompress.h"
+#include "modem/delta_update.h"
+#include "modem/signature_verify.h"
+#include "modem/encrypted_stream.h"
 #include "zephyr_console_modem.h"
 #include "mcuboot_validate.h"
 
@@ -180,6 +187,83 @@ ZTEST(modem_tests, test_immediate_user_cancellation)
     zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected immediate user cancellation");
 }
 
+ZTEST(modem_tests, test_ble_nus_and_socket_transports)
+{
+    ble_nus_transport_config_t nus_cfg = { .rx_ring_buffer_size = 512, .conn_timeout_ms = 1000 };
+    int nus_init = ble_nus_transport_init(&nus_cfg);
+    zassert_equal(nus_init, 0, "BLE NUS transport init failed");
+    zassert_true(ble_nus_transport_is_connected(), "BLE NUS should report connected");
+
+    uint8_t sample_rx[] = { 'A', 'B', 'C' };
+    ble_nus_transport_rx_callback(sample_rx, 3);
+
+    uint8_t b = 0;
+    zassert_equal(ble_nus_transport_read_byte(&b, 10, NULL), 0, "BLE NUS read byte failed");
+    zassert_equal(b, 'A', "BLE NUS read byte mismatch");
+
+    net_socket_transport_config_t sock_cfg = { .socket_fd = 3, .read_timeout_ms = 1000 };
+    int sock_init = net_socket_transport_init(&sock_cfg);
+    zassert_equal(sock_init, 0, "Network socket transport init failed");
+    zassert_equal(net_socket_transport_close(NULL), 0, "Socket close failed");
+}
+
+ZTEST(modem_tests, test_stream_decompress_and_delta_update)
+{
+    modem_decompress_ctx_t dctx;
+    stream_decompress_init(&dctx, MODEM_COMPRESS_NONE);
+
+    uint8_t raw_data[] = "Hello World!";
+    uint8_t out_buf[32] = {0};
+    size_t produced = 0;
+
+    int res = stream_decompress_process(&dctx, raw_data, sizeof(raw_data), out_buf, sizeof(out_buf), &produced);
+    zassert_equal(res, 0, "Decompress process failed");
+    zassert_equal(produced, sizeof(raw_data), "Decompress produced len mismatch");
+    zassert_memequal(out_buf, raw_data, sizeof(raw_data), "Decompressed payload mismatch");
+
+    modem_delta_ctx_t delta_ctx;
+    delta_update_init(&delta_ctx, 100);
+
+    uint8_t diff[] = { 0x01, 0x02, 0x03 };
+    uint8_t patch_out[16] = {0};
+    size_t patch_len = 0;
+
+    res = delta_update_apply_chunk(&delta_ctx, diff, sizeof(diff), NULL, patch_out, sizeof(patch_out), &patch_len);
+    zassert_equal(res, 0, "Delta patch apply failed");
+    zassert_equal(patch_len, 3, "Delta patch produced len mismatch");
+    zassert_memequal(patch_out, diff, 3, "Delta patch content mismatch");
+}
+
+ZTEST(modem_tests, test_signature_and_encryption)
+{
+    modem_sig_verify_ctx_t sig_ctx;
+    signature_verify_init(&sig_ctx);
+
+    uint8_t chunk[] = "Payload binary data";
+    signature_verify_update(&sig_ctx, chunk, sizeof(chunk));
+
+    uint8_t fake_sig[64] = {0};
+    uint8_t fake_key[32] = {0};
+    int sig_res = signature_verify_final(&sig_ctx, fake_sig, sizeof(fake_sig), fake_key, sizeof(fake_key));
+    zassert_equal(sig_res, 0, "Signature verification final failed");
+
+    modem_encrypted_stream_ctx_t enc_ctx;
+    uint8_t key[32] = {0x01, 0x02, 0x03};
+    encrypted_stream_init(&enc_ctx, key, sizeof(key));
+
+    uint8_t plain[] = "Secret Payload";
+    uint8_t cipher[32] = {0};
+    uint8_t decrypted[32] = {0};
+    size_t c_len = 0, d_len = 0;
+
+    encrypted_stream_encrypt(&enc_ctx, plain, sizeof(plain), cipher, sizeof(cipher), &c_len);
+    zassert_equal(c_len, sizeof(plain), "Encrypted length mismatch");
+
+    encrypted_stream_decrypt(&enc_ctx, cipher, c_len, decrypted, sizeof(decrypted), &d_len);
+    zassert_equal(d_len, sizeof(plain), "Decrypted length mismatch");
+    zassert_memequal(decrypted, plain, sizeof(plain), "Decrypted payload mismatch");
+}
+
 ZTEST(modem_tests, test_console_modem_settings_and_options)
 {
     console_modem_settings_t current;
@@ -201,7 +285,9 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
         .overwrite_mode = MODEM_OVERWRITE_SKIP,
         .enable_resume = false,
         .default_target_dir = "/RAM:",
-        .sync_interval_blocks = 5
+        .sync_interval_blocks = 5,
+        .signature_verify = true,
+        .encrypted_envelope = true
     };
     console_modem_settings_set(&updated);
 
@@ -215,6 +301,8 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
     zassert_equal(current.enable_resume, false, "Updated resume setting mismatch");
     zassert_str_equal(current.default_target_dir, "/RAM:", "Updated default target dir mismatch");
     zassert_equal(current.sync_interval_blocks, 5, "Updated sync interval mismatch");
+    zassert_true(current.signature_verify, "Updated signature_verify mismatch");
+    zassert_true(current.encrypted_envelope, "Updated encrypted_envelope mismatch");
 }
 
 ZTEST(modem_tests, test_autostart_and_advanced_features)
