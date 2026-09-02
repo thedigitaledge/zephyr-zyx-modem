@@ -5,7 +5,7 @@
 
 This guide provides a user manual and parameter access reference for the Zephyr OS Console Modem shell interface (XMODEM, YMODEM, ZMODEM).
 
-For full Kconfig configuration options and library deployment instructions, refer to [docs/deployment.md](deployment.md).
+For full Kconfig configuration options and library deployment instructions, refer to [docs/developer_guide.md](developer_guide.md).
 For technical specifications, packet formats, and sequence diagrams, refer to [docs/protocols.md](protocols.md).
 
 ---
