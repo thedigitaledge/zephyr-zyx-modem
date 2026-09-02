@@ -59,6 +59,7 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_DIRECTORY_TRANSFERS`** (bool, default `y`): Allow transmitting all files in a directory via batch transfers.
 * **`CONFIG_MODEM_RING_BUFFER`** (bool, default `y`): Non-blocking interrupt-driven ring buffer UART adapter.
 * **`CONFIG_MODEM_ABORT_KEY`** (bool, default `y`): Monitor console stream for Ctrl-C (`0x03`) or double CAN (`0x18 0x18`) user cancellation sequences.
+* **`CONFIG_MODEM_ABORT_KEY_CHAR`** (int, default `3`): ASCII byte value used as terminal abort key (e.g. `3` for Ctrl-C / `0x03`, `27` for ESC / `0x1B`, `24` for CAN / `0x18`).
 
 ---
 
@@ -105,5 +106,6 @@ Modem Configuration:
 | `directory_transfers` | **Read/Write** | Directory batch transfer toggle (`true`/`1` or `false`/`0`) |
 | `ring_buffer` | **Read/Write** | Ring buffer transport adapter toggle (`true`/`1` or `false`/`0`) |
 | `abort_key` | **Read/Write** | Terminal abort key monitor toggle (`true`/`1` or `false`/`0`) |
+| `abort_char` | **Read/Write** | Terminal abort key ASCII byte value (e.g. `3` for Ctrl-C, `27` for ESC) |
 | *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
 | *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |

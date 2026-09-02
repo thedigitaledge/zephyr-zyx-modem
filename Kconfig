@@ -149,6 +149,13 @@ config MODEM_ABORT_KEY
 	help
 	  Monitor console stream during transfer for Ctrl-C or CAN CAN abort key sequences.
 
+config MODEM_ABORT_KEY_CHAR
+	int "Configurable Abort Key Character Code (ASCII)"
+	default 3
+	depends on MODEM_ABORT_KEY
+	help
+	  ASCII byte value used as the terminal abort key (default 3 for Ctrl-C / 0x03, 27 for ESC / 0x1B, 24 for CAN / 0x18).
+
 config MODEM_CONSOLE
 	bool "Zephyr Console Modem Protocol Integration"
 	default y

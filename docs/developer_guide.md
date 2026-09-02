@@ -148,6 +148,7 @@ void configure_modem_runtime(void)
     cfg.directory_transfers = true;
     cfg.ring_buffer = true;
     cfg.abort_key = true;
+    cfg.abort_key_char = 27; /* ESC */
 
     console_modem_settings_set(&cfg);
 }

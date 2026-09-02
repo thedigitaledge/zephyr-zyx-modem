@@ -231,6 +231,14 @@ ZTEST(modem_tests, test_autostart_and_advanced_features)
     zassert_true(current.directory_transfers, "Default directory_transfers setting mismatch");
     zassert_true(current.ring_buffer, "Default ring_buffer setting mismatch");
     zassert_true(current.abort_key, "Default abort_key setting mismatch");
+    zassert_equal(current.abort_key_char, 3, "Default abort_key_char setting mismatch");
+
+    /* Test setting custom abort key character (e.g. 27 / ESC / 0x1B) */
+    current.abort_key_char = 27;
+    console_modem_settings_set(&current);
+
+    console_modem_settings_get(&current);
+    zassert_equal(current.abort_key_char, 27, "Updated abort_key_char setting mismatch");
 }
 
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);

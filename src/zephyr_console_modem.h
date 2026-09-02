@@ -46,6 +46,7 @@ typedef struct {
     bool directory_transfers;      /**< Enable directory batch transfers */
     bool ring_buffer;              /**< Enable ring buffer UART transport adapter */
     bool abort_key;                /**< Enable terminal abort key monitoring */
+    uint8_t abort_key_char;        /**< Configurable abort key ASCII byte value (default 0x03) */
 } console_modem_settings_t;
 
 /**

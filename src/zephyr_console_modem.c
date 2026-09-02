@@ -94,6 +94,10 @@
 #define CONFIG_MODEM_ABORT_KEY 1
 #endif
 
+#if !defined(CONFIG_MODEM_ABORT_KEY_CHAR)
+#define CONFIG_MODEM_ABORT_KEY_CHAR 3
+#endif
+
 /* Runtime Modem Configuration */
 static console_modem_settings_t g_modem_settings = {
     .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
@@ -110,7 +114,8 @@ static console_modem_settings_t g_modem_settings = {
     .progress_bar = CONFIG_MODEM_PROGRESS_BAR,
     .directory_transfers = CONFIG_MODEM_DIRECTORY_TRANSFERS,
     .ring_buffer = CONFIG_MODEM_RING_BUFFER,
-    .abort_key = CONFIG_MODEM_ABORT_KEY
+    .abort_key = CONFIG_MODEM_ABORT_KEY,
+    .abort_key_char = CONFIG_MODEM_ABORT_KEY_CHAR
 };
 
 void console_modem_settings_get(console_modem_settings_t *settings)
@@ -210,7 +215,7 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
     }
 
     if (g_modem_settings.abort_key) {
-        if (b == 0x03) { /* Ctrl-C */
+        if (b == g_modem_settings.abort_key_char) {
             return -2;   /* Transfer cancelled by user */
         }
         if (b == 0x18) { /* CAN */
@@ -789,6 +794,7 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  Directory Transfers: %s", g_modem_settings.directory_transfers ? "true" : "false");
         shell_print(sh, "  Ring Buffer Transport: %s", g_modem_settings.ring_buffer ? "true" : "false");
         shell_print(sh, "  Abort Key Monitor:   %s", g_modem_settings.abort_key ? "true" : "false");
+        shell_print(sh, "  Abort Key Char:      0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
         return 0;
     }
 
@@ -843,6 +849,9 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "abort_key") == 0) {
             g_modem_settings.abort_key = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Abort key monitor set to %s", g_modem_settings.abort_key ? "true" : "false");
+        } else if (strcmp(param, "abort_char") == 0 || strcmp(param, "abort_key_char") == 0) {
+            g_modem_settings.abort_key_char = (uint8_t)val;
+            shell_print(sh, "Abort key character set to 0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;
