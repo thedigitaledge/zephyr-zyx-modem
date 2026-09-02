@@ -152,6 +152,33 @@ ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
     zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected cancel failure");
 }
 
+static int mock_rx_read_byte_cancel(uint8_t *byte, uint32_t timeout_ms, void *user_data)
+{
+    (void)byte;
+    (void)timeout_ms;
+    (void)user_data;
+    return -2; /* Immediate user cancel signal */
+}
+
+ZTEST(modem_tests, test_immediate_user_cancellation)
+{
+    loopback_pipe_t pipe = {0};
+
+    xmodem_callbacks_t cbs = {
+        .read_byte = mock_rx_read_byte_cancel,
+        .write_bytes = mock_rx_write_data,
+        .data_cb = mock_rx_data_payload_cb,
+        .user_data = &pipe
+    };
+
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+
+    size_t total_rx = 0;
+    xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
+    zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected immediate user cancellation");
+}
+
 ZTEST(modem_tests, test_console_modem_settings_and_options)
 {
     console_modem_settings_t current;
@@ -187,6 +214,23 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
     zassert_equal(current.enable_resume, false, "Updated resume setting mismatch");
     zassert_str_equal(current.default_target_dir, "/RAM:", "Updated default target dir mismatch");
     zassert_equal(current.sync_interval_blocks, 5, "Updated sync interval mismatch");
+}
+
+ZTEST(modem_tests, test_autostart_and_advanced_features)
+{
+    /* Test Autostart detection */
+    zassert_false(console_modem_check_autostart('r'), "Autostart step 1 should return false");
+    zassert_false(console_modem_check_autostart('z'), "Autostart step 2 should return false");
+    zassert_true(console_modem_check_autostart('\r'), "Autostart trigger failed");
+
+    console_modem_settings_t current;
+    console_modem_settings_get(&current);
+    zassert_true(current.auto_start, "Default auto_start setting mismatch");
+    zassert_true(current.async_storage, "Default async_storage setting mismatch");
+    zassert_true(current.progress_bar, "Default progress_bar setting mismatch");
+    zassert_true(current.directory_transfers, "Default directory_transfers setting mismatch");
+    zassert_true(current.ring_buffer, "Default ring_buffer setting mismatch");
+    zassert_true(current.abort_key, "Default abort_key setting mismatch");
 }
 
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);

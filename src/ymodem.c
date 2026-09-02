@@ -77,7 +77,13 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
         send_byte_rx(callbacks, XMODEM_C);
 
         while (retries < MAX_RETRIES && !header_received) {
-            if (callbacks->read_byte(&header, PACKET_TIMEOUT_MS, callbacks->user_data) != 0) {
+            int hres = callbacks->read_byte(&header, PACKET_TIMEOUT_MS, callbacks->user_data);
+            if (hres == -2) {
+                send_byte_rx(callbacks, XMODEM_CAN);
+                send_byte_rx(callbacks, XMODEM_CAN);
+                return YMODEM_ERROR_CANCEL;
+            }
+            if (hres != 0) {
                 retries++;
                 send_byte_rx(callbacks, XMODEM_C);
                 continue;
@@ -164,7 +170,16 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
 
         while (!file_done) {
             uint8_t pkt_hdr;
-            if (callbacks->read_byte(&pkt_hdr, PACKET_TIMEOUT_MS, callbacks->user_data) != 0) {
+            int pres = callbacks->read_byte(&pkt_hdr, PACKET_TIMEOUT_MS, callbacks->user_data);
+            if (pres == -2) {
+                send_byte_rx(callbacks, XMODEM_CAN);
+                send_byte_rx(callbacks, XMODEM_CAN);
+                if (callbacks->on_file_end) {
+                    callbacks->on_file_end(&info, YMODEM_ERROR_CANCEL, callbacks->user_data);
+                }
+                return YMODEM_ERROR_CANCEL;
+            }
+            if (pres != 0) {
                 retries++;
                 if (retries > MAX_RETRIES) {
                     send_byte_rx(callbacks, XMODEM_CAN);

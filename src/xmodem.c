@@ -73,7 +73,12 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
         uint8_t header;
         int res = callbacks->read_byte(&header, cfg.packet_timeout_ms, callbacks->user_data);
 
-        /* Step 2a: Timeout handling and CRC fallback */
+        /* Step 2a: Cancellation or Timeout handling and CRC fallback */
+        if (res == -2) {
+            send_byte(callbacks, XMODEM_CAN);
+            send_byte(callbacks, XMODEM_CAN);
+            return XMODEM_ERROR_CANCEL;
+        }
         if (res != 0) {
             retries++;
             if (retries > cfg.max_retries) {
@@ -299,7 +304,13 @@ xmodem_status_t xmodem_transmit(const xmodem_callbacks_t *callbacks,
             }
 
             uint8_t rx_resp;
-            if (callbacks->read_byte(&rx_resp, cfg.packet_timeout_ms, callbacks->user_data) == 0) {
+            int rx_res = callbacks->read_byte(&rx_resp, cfg.packet_timeout_ms, callbacks->user_data);
+            if (rx_res == -2) {
+                send_byte(callbacks, XMODEM_CAN);
+                send_byte(callbacks, XMODEM_CAN);
+                return XMODEM_ERROR_CANCEL;
+            }
+            if (rx_res == 0) {
                 if (rx_resp == XMODEM_ACK) {
                     acked = true;
                 } else if (rx_resp == XMODEM_CAN) {

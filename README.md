@@ -29,11 +29,13 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Support for 32-bit CRC (`CONFIG_MODEM_ZMODEM_USE_CRC32`).
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
-- **Zephyr OS Console & Shell Integration**:
-  - Zephyr shell commands:
-    - Receive commands (requires `CONFIG_FILE_SYSTEM`): `modem rx [x|y|z] [file]` or short command `mrx [x|y|z] [file]`
-    - Transmit commands (requires `CONFIG_FILE_SYSTEM`): `modem tx [x|y|z] <file>` or short command `mtx [x|y|z] <file>`
-    - Configuration command: `modem config [param val]`
+- **Advanced Features & Console Enhancements**:
+  - **ZMODEM Auto-Start Detection** (`CONFIG_MODEM_AUTO_START`): Automatically detects `rz\r` incoming sequence to switch terminal mode dynamically.
+  - **Async Storage Writes** (`CONFIG_MODEM_ASYNC_STORAGE`): Offloads disk/flash writes to background Zephyr workqueues (`k_work`).
+  - **Real-time Shell Progress Bar & Metrics** (`CONFIG_MODEM_PROGRESS_BAR`): Displays transfer percentage, transferred bytes, total size, and throughput (KB/s) on console.
+  - **Directory Batch Transfers** (`CONFIG_MODEM_DIRECTORY_TRANSFERS`): Transmits all files in target directory via YMODEM/ZMODEM batch operations.
+  - **Ring Buffer Transport Adapter** (`CONFIG_MODEM_RING_BUFFER`): Microsecond non-blocking UART interrupt-driven byte stream adapter.
+  - **Terminal Abort Monitoring** (`CONFIG_MODEM_ABORT_KEY`): Cancels active transfer immediately on user Ctrl-C or double CAN (`0x18 0x18`) sequence.
   - Configurable timeouts and pacing via Kconfig defaults (`CONFIG_MODEM_PACKET_TIMEOUT_MS`, `CONFIG_MODEM_BYTE_TIMEOUT_MS`, `CONFIG_MODEM_MAX_RETRIES`, `CONFIG_MODEM_INTER_BLOCK_DELAY_MS`, `CONFIG_MODEM_HANDSHAKE_DELAY_MS`).
   - Configurable file storage policy (`CONFIG_MODEM_FILE_OVERWRITE_MODE`, `CONFIG_MODEM_DEFAULT_TARGET_DIR`, `CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`).
   - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
@@ -110,6 +112,14 @@ CONFIG_MODEM_FILE_OVERWRITE_MODE=0
 CONFIG_MODEM_ENABLE_RESUME=y
 CONFIG_MODEM_DEFAULT_TARGET_DIR=""
 CONFIG_MODEM_SYNC_INTERVAL_BLOCKS=10
+
+# Advanced Feature Toggles
+CONFIG_MODEM_AUTO_START=y
+CONFIG_MODEM_ASYNC_STORAGE=y
+CONFIG_MODEM_PROGRESS_BAR=y
+CONFIG_MODEM_DIRECTORY_TRANSFERS=y
+CONFIG_MODEM_RING_BUFFER=y
+CONFIG_MODEM_ABORT_KEY=y
 ```
 
 ---

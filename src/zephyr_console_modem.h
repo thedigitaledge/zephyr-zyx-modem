@@ -40,6 +40,12 @@ typedef struct {
     bool enable_resume;            /**< Enable ZMODEM auto-resume */
     char default_target_dir[128];  /**< Default storage directory path */
     uint32_t sync_interval_blocks; /**< Interval in blocks between file syncs */
+    bool auto_start;               /**< Enable ZMODEM auto-start detection */
+    bool async_storage;            /**< Offload file writes to Zephyr workqueue */
+    bool progress_bar;             /**< Render shell progress bar and throughput */
+    bool directory_transfers;      /**< Enable directory batch transfers */
+    bool ring_buffer;              /**< Enable ring buffer UART transport adapter */
+    bool abort_key;                /**< Enable terminal abort key monitoring */
 } console_modem_settings_t;
 
 /**
@@ -72,6 +78,10 @@ int console_modem_rx_zmodem(const char *output_filename);
 int console_modem_tx_xmodem(const char *input_filename);
 int console_modem_tx_ymodem(const char *input_filename);
 int console_modem_tx_zmodem(const char *input_filename);
+
+/** Advanced Feature Functions */
+int console_modem_tx_directory(const char *dir_path, int protocol);
+bool console_modem_check_autostart(uint8_t byte);
 
 #ifdef __cplusplus
 }

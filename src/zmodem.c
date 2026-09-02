@@ -122,7 +122,9 @@ static void send_hex_header_tx(const zmodem_tx_callbacks_t *cbs, uint8_t type, c
 static int read_zdle_byte_rx(const zmodem_rx_callbacks_t *cbs, uint8_t *b)
 {
     uint8_t ch;
-    if (cbs->read_byte(&ch, ZMODEM_TIMEOUT_MS, cbs->user_data) != 0) {
+    int res = cbs->read_byte(&ch, ZMODEM_TIMEOUT_MS, cbs->user_data);
+    if (res == -2) return -2;
+    if (res != 0) {
         return -1;
     }
     if (ch == ZDLE) {
@@ -147,7 +149,9 @@ static int read_zdle_byte_rx(const zmodem_rx_callbacks_t *cbs, uint8_t *b)
 static int read_zdle_byte_tx(const zmodem_tx_callbacks_t *cbs, uint8_t *b)
 {
     uint8_t ch;
-    if (cbs->read_byte(&ch, ZMODEM_TIMEOUT_MS, cbs->user_data) != 0) {
+    int res = cbs->read_byte(&ch, ZMODEM_TIMEOUT_MS, cbs->user_data);
+    if (res == -2) return -2;
+    if (res != 0) {
         return -1;
     }
     if (ch == ZDLE) {

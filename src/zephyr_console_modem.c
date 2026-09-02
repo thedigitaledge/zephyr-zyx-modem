@@ -27,6 +27,7 @@
 #include <stdlib.h>
 
 #include <zephyr/kernel.h>
+#include <zephyr/sys/ring_buffer.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/console/console.h>
 #if defined(CONFIG_FILE_SYSTEM)
@@ -69,6 +70,30 @@
 #define CONFIG_MODEM_SYNC_INTERVAL_BLOCKS 10
 #endif
 
+#if !defined(CONFIG_MODEM_AUTO_START)
+#define CONFIG_MODEM_AUTO_START 1
+#endif
+
+#if !defined(CONFIG_MODEM_ASYNC_STORAGE)
+#define CONFIG_MODEM_ASYNC_STORAGE 1
+#endif
+
+#if !defined(CONFIG_MODEM_PROGRESS_BAR)
+#define CONFIG_MODEM_PROGRESS_BAR 1
+#endif
+
+#if !defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
+#define CONFIG_MODEM_DIRECTORY_TRANSFERS 1
+#endif
+
+#if !defined(CONFIG_MODEM_RING_BUFFER)
+#define CONFIG_MODEM_RING_BUFFER 1
+#endif
+
+#if !defined(CONFIG_MODEM_ABORT_KEY)
+#define CONFIG_MODEM_ABORT_KEY 1
+#endif
+
 /* Runtime Modem Configuration */
 static console_modem_settings_t g_modem_settings = {
     .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
@@ -79,7 +104,13 @@ static console_modem_settings_t g_modem_settings = {
     .overwrite_mode = (modem_overwrite_mode_t)CONFIG_MODEM_FILE_OVERWRITE_MODE,
     .enable_resume = CONFIG_MODEM_ENABLE_RESUME,
     .default_target_dir = CONFIG_MODEM_DEFAULT_TARGET_DIR,
-    .sync_interval_blocks = CONFIG_MODEM_SYNC_INTERVAL_BLOCKS
+    .sync_interval_blocks = CONFIG_MODEM_SYNC_INTERVAL_BLOCKS,
+    .auto_start = CONFIG_MODEM_AUTO_START,
+    .async_storage = CONFIG_MODEM_ASYNC_STORAGE,
+    .progress_bar = CONFIG_MODEM_PROGRESS_BAR,
+    .directory_transfers = CONFIG_MODEM_DIRECTORY_TRANSFERS,
+    .ring_buffer = CONFIG_MODEM_RING_BUFFER,
+    .abort_key = CONFIG_MODEM_ABORT_KEY
 };
 
 void console_modem_settings_get(console_modem_settings_t *settings)
@@ -107,22 +138,118 @@ typedef struct {
 #endif
     size_t file_size;
     size_t bytes_transferred;
+    int64_t start_time_ms;
     char target_path[256];
 } console_modem_ctx_t;
 
+static int g_can_count = 0;
+
+/* Ring buffer UART transport adapter */
+RING_BUF_DECLARE(g_uart_ring_buf, 512);
+
+/* Async storage work item structure */
+struct async_storage_work_t {
+    struct k_work work_item;
+    struct fs_file_t *zfile;
+    uint8_t data[1024];
+    size_t len;
+    ssize_t res;
+};
+
+static struct async_storage_work_t g_async_work;
+
+static void async_write_handler(struct k_work *work)
+{
+    struct async_storage_work_t *w = CONTAINER_OF(work, struct async_storage_work_t, work_item);
+    if (w->zfile) {
+        w->res = fs_write(w->zfile, w->data, w->len);
+    }
+}
+
 /**
- * Console byte read helper.
+ * Auto-Start detection handler.
+ */
+static uint8_t g_autostart_buf[8] = {0};
+static size_t g_autostart_idx = 0;
+
+bool console_modem_check_autostart(uint8_t byte)
+{
+    if (!g_modem_settings.auto_start) return false;
+    g_autostart_buf[g_autostart_idx % 8] = byte;
+    g_autostart_idx++;
+    if (g_autostart_idx >= 3) {
+        size_t idx = (g_autostart_idx - 3) % 8;
+        if (g_autostart_buf[idx] == 'r' &&
+            g_autostart_buf[(idx + 1) % 8] == 'z' &&
+            g_autostart_buf[(idx + 2) % 8] == '\r') {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Console byte read helper with Abort Key monitoring.
  */
 static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 {
     (void)timeout_ms;
     (void)user_data;
-    int ch = console_getchar();
-    if (ch < 0) {
-        return -1;
+    uint8_t b;
+
+    if (g_modem_settings.ring_buffer && !ring_buf_is_empty(&g_uart_ring_buf)) {
+        if (ring_buf_get(&g_uart_ring_buf, &b, 1) != 1) {
+            return -1;
+        }
+    } else {
+        int ch = console_getchar();
+        if (ch < 0) {
+            return -1;
+        }
+        b = (uint8_t)ch;
     }
-    *byte = (uint8_t)ch;
+
+    if (g_modem_settings.abort_key) {
+        if (b == 0x03) { /* Ctrl-C */
+            return -2;   /* Transfer cancelled by user */
+        }
+        if (b == 0x18) { /* CAN */
+            g_can_count++;
+            if (g_can_count >= 2) {
+                g_can_count = 0;
+                return -2; /* Transfer cancelled by user */
+            }
+        } else {
+            g_can_count = 0;
+        }
+    }
+
+    *byte = b;
     return 0;
+}
+
+/**
+ * Real-time shell progress bar renderer.
+ */
+static void update_progress_bar(console_modem_ctx_t *ctx)
+{
+    if (!g_modem_settings.progress_bar || !ctx || ctx->file_size == 0) return;
+    int percent = (int)((ctx->bytes_transferred * 100) / ctx->file_size);
+    if (percent > 100) percent = 100;
+
+    int64_t elapsed_ms = k_uptime_get() - ctx->start_time_ms;
+    double kb_s = (elapsed_ms > 0) ? ((double)ctx->bytes_transferred / 1024.0) / ((double)elapsed_ms / 1000.0) : 0.0;
+
+    int bar_width = 20;
+    int filled = (percent * bar_width) / 100;
+    printf("\rProgress: [");
+    for (int i = 0; i < bar_width; i++) {
+        if (i < filled) printf("=");
+        else if (i == filled) printf(">");
+        else printf(" ");
+    }
+    printf("] %3d%% (%zu/%zu B, %.1f KB/s)", percent, ctx->bytes_transferred, ctx->file_size, kb_s);
+    fflush(stdout);
 }
 
 /**
@@ -144,10 +271,28 @@ static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
  */
 static int open_output_file(console_modem_ctx_t *ctx, const char *path)
 {
+    char full_path[256];
+    if (g_modem_settings.default_target_dir[0] != '\0' && path[0] != '/') {
+        snprintf(full_path, sizeof(full_path), "%s/%s", g_modem_settings.default_target_dir, path);
+    } else {
+        snprintf(full_path, sizeof(full_path), "%s", path);
+    }
+
+    /* File overwrite policy check */
+    struct fs_dirent entry;
+    if (fs_stat(full_path, &entry) == 0) {
+        if (g_modem_settings.overwrite_mode == MODEM_OVERWRITE_SKIP) {
+            return -2; /* Skip file */
+        } else if (g_modem_settings.overwrite_mode == MODEM_OVERWRITE_ABORT) {
+            return -3; /* Abort transfer */
+        }
+    }
+
     fs_file_t_init(&ctx->zfile);
-    int res = fs_open(&ctx->zfile, path, FS_O_CREATE | FS_O_WRITE);
+    int res = fs_open(&ctx->zfile, full_path, FS_O_CREATE | FS_O_WRITE);
     if (res == 0) {
         ctx->zfile_open = true;
+        ctx->start_time_ms = k_uptime_get();
         return 0;
     }
     return -1;
@@ -177,7 +322,23 @@ static int open_input_file(console_modem_ctx_t *ctx, const char *path)
 static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t len)
 {
     if (!ctx->zfile_open) return -1;
-    ssize_t res = fs_write(&ctx->zfile, buf, len);
+    ssize_t res;
+
+    if (g_modem_settings.async_storage) {
+        k_work_init(&g_async_work.work_item, async_write_handler);
+        g_async_work.zfile = &ctx->zfile;
+        size_t copy_len = (len > sizeof(g_async_work.data)) ? sizeof(g_async_work.data) : len;
+        memcpy(g_async_work.data, buf, copy_len);
+        g_async_work.len = copy_len;
+        g_async_work.res = -1;
+
+        k_work_submit(&g_async_work.work_item);
+        k_work_flush(&g_async_work.work_item, NULL);
+        res = g_async_work.res;
+    } else {
+        res = fs_write(&ctx->zfile, buf, len);
+    }
+
     if (res < 0) return -1;
     ctx->bytes_transferred += (size_t)res;
 
@@ -516,6 +677,38 @@ int console_modem_tx_zmodem(const char *input_filename)
 #endif
 }
 
+int console_modem_tx_directory(const char *dir_path, int protocol)
+{
+#if defined(CONFIG_FILE_SYSTEM)
+    if (!g_modem_settings.directory_transfers || !dir_path) return -1;
+
+    struct fs_dir_t dir;
+    fs_dir_t_init(&dir);
+    int res = fs_opendir(&dir, dir_path);
+    if (res != 0) return -1;
+
+    struct fs_dirent entry;
+    while (fs_readdir(&dir, &entry) == 0 && entry.name[0] != '\0') {
+        if (entry.type == FS_DIR_ENTRY_FILE) {
+            char file_path[256];
+            snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry.name);
+
+            if (protocol == 1) {
+                console_modem_tx_ymodem(file_path);
+            } else {
+                console_modem_tx_zmodem(file_path);
+            }
+        }
+    }
+    fs_closedir(&dir);
+    return 0;
+#else
+    (void)dir_path;
+    (void)protocol;
+    return -1;
+#endif
+}
+
 #endif /* CONFIG_FILE_SYSTEM */
 
 /* Zephyr Shell Commands Registration */
@@ -559,6 +752,14 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
         proto = "zmodem";
     }
 
+    struct fs_dirent entry;
+    if (in_path && fs_stat(in_path, &entry) == 0) {
+        if (entry.type == FS_DIR_ENTRY_DIR) {
+            int p_code = (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) ? 1 : 2;
+            return console_modem_tx_directory(in_path, p_code);
+        }
+    }
+
     if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
         return console_modem_tx_xmodem(in_path);
     } else if (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) {
@@ -582,6 +783,12 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  Auto-Resume:         %s", g_modem_settings.enable_resume ? "true" : "false");
         shell_print(sh, "  Target Directory:    %s", g_modem_settings.default_target_dir[0] ? g_modem_settings.default_target_dir : "(root)");
         shell_print(sh, "  Sync Interval:       %u blocks", g_modem_settings.sync_interval_blocks);
+        shell_print(sh, "  Auto-Start:          %s", g_modem_settings.auto_start ? "true" : "false");
+        shell_print(sh, "  Async Storage:       %s", g_modem_settings.async_storage ? "true" : "false");
+        shell_print(sh, "  Progress Bar:        %s", g_modem_settings.progress_bar ? "true" : "false");
+        shell_print(sh, "  Directory Transfers: %s", g_modem_settings.directory_transfers ? "true" : "false");
+        shell_print(sh, "  Ring Buffer Transport: %s", g_modem_settings.ring_buffer ? "true" : "false");
+        shell_print(sh, "  Abort Key Monitor:   %s", g_modem_settings.abort_key ? "true" : "false");
         return 0;
     }
 
@@ -618,6 +825,24 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "sync_interval") == 0) {
             g_modem_settings.sync_interval_blocks = val;
             shell_print(sh, "Sync interval set to %u blocks", val);
+        } else if (strcmp(param, "auto_start") == 0) {
+            g_modem_settings.auto_start = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Auto-start set to %s", g_modem_settings.auto_start ? "true" : "false");
+        } else if (strcmp(param, "async_storage") == 0) {
+            g_modem_settings.async_storage = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Async storage set to %s", g_modem_settings.async_storage ? "true" : "false");
+        } else if (strcmp(param, "progress_bar") == 0) {
+            g_modem_settings.progress_bar = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Progress bar set to %s", g_modem_settings.progress_bar ? "true" : "false");
+        } else if (strcmp(param, "directory_transfers") == 0) {
+            g_modem_settings.directory_transfers = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Directory transfers set to %s", g_modem_settings.directory_transfers ? "true" : "false");
+        } else if (strcmp(param, "ring_buffer") == 0) {
+            g_modem_settings.ring_buffer = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Ring buffer transport set to %s", g_modem_settings.ring_buffer ? "true" : "false");
+        } else if (strcmp(param, "abort_key") == 0) {
+            g_modem_settings.abort_key = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Abort key monitor set to %s", g_modem_settings.abort_key ? "true" : "false");
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;

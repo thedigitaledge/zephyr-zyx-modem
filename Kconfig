@@ -56,6 +56,12 @@ config MODEM_ZMODEM_ESCAPE_CTRL_CHARS
 	help
 	  When enabled, ZMODEM escapes control characters via ZDLE to support software flow control.
 
+config MODEM_AUTO_START
+	bool "ZMODEM Auto-Start Detection"
+	default y
+	help
+	  Enable background monitoring of console input stream for ZMODEM initiation sequence.
+
 endif # MODEM_ZMODEM
 
 config MODEM_PACKET_TIMEOUT_MS
@@ -111,6 +117,37 @@ config MODEM_SYNC_INTERVAL_BLOCKS
 	default 10
 	help
 	  Interval in received payload blocks between calling storage file sync.
+
+config MODEM_ASYNC_STORAGE
+	bool "Async Storage Writes via Zephyr Workqueue (k_work)"
+	default y
+	help
+	  Offload file system write operations to a background Zephyr workqueue thread.
+
+config MODEM_PROGRESS_BAR
+	bool "Real-time Shell Progress Bar & Metrics"
+	default y
+	help
+	  Render transfer percentage, throughput (KB/s), elapsed time, and ETA on shell console.
+
+config MODEM_DIRECTORY_TRANSFERS
+	bool "Directory Batch Transfers"
+	default y
+	depends on FILE_SYSTEM
+	help
+	  Allow transmitting all files in a directory via YMODEM/ZMODEM batch transfers.
+
+config MODEM_RING_BUFFER
+	bool "Ring Buffer UART Transport Adapter"
+	default y
+	help
+	  Use a Zephyr ring buffer for non-blocking UART byte reception with microsecond precision.
+
+config MODEM_ABORT_KEY
+	bool "Terminal Abort Key Monitoring (Ctrl-C / CAN CAN)"
+	default y
+	help
+	  Monitor console stream during transfer for Ctrl-C or CAN CAN abort key sequences.
 
 config MODEM_CONSOLE
 	bool "Zephyr Console Modem Protocol Integration"

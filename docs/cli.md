@@ -52,6 +52,14 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_DEFAULT_TARGET_DIR`** (string, default `""`): Default storage mount point directory path.
 * **`CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`** (int, default `10`): Interval in received payload blocks between calling storage `fs_sync()`.
 
+### Advanced Feature Options
+* **`CONFIG_MODEM_AUTO_START`** (bool, default `y`): Background monitoring of console stream for ZMODEM initiation sequence (`rz\r`).
+* **`CONFIG_MODEM_ASYNC_STORAGE`** (bool, default `y`): Offload file write operations to background Zephyr workqueues (`k_work`).
+* **`CONFIG_MODEM_PROGRESS_BAR`** (bool, default `y`): Real-time shell console progress bar and throughput (KB/s) indicator.
+* **`CONFIG_MODEM_DIRECTORY_TRANSFERS`** (bool, default `y`): Allow transmitting all files in a directory via batch transfers.
+* **`CONFIG_MODEM_RING_BUFFER`** (bool, default `y`): Non-blocking interrupt-driven ring buffer UART adapter.
+* **`CONFIG_MODEM_ABORT_KEY`** (bool, default `y`): Monitor console stream for Ctrl-C (`0x03`) or double CAN (`0x18 0x18`) user cancellation sequences.
+
 ---
 
 ## 3. Console Settings & Parameter Read/Write Permissions
@@ -70,6 +78,12 @@ Modem Configuration:
   Auto-Resume:         true
   Target Directory:    (root)
   Sync Interval:       10 blocks
+  Auto-Start:          true
+  Async Storage:       true
+  Progress Bar:        true
+  Directory Transfers: true
+  Ring Buffer Transport: true
+  Abort Key Monitor:   true
 ```
 
 ### Parameter Permission Matrix
@@ -85,5 +99,11 @@ Modem Configuration:
 | `enable_resume` | **Read/Write** | Auto-resume toggle (`true`/`1` or `false`/`0`) |
 | `target_dir` | **Read/Write** | Default target folder (e.g. `/SD:`) |
 | `sync_interval` | **Read/Write** | Flash `fs_sync()` interval in blocks (0 = at file end) |
+| `auto_start` | **Read/Write** | ZMODEM auto-start detection toggle (`true`/`1` or `false`/`0`) |
+| `async_storage` | **Read/Write** | Async workqueue file write toggle (`true`/`1` or `false`/`0`) |
+| `progress_bar` | **Read/Write** | Real-time shell progress bar toggle (`true`/`1` or `false`/`0`) |
+| `directory_transfers` | **Read/Write** | Directory batch transfer toggle (`true`/`1` or `false`/`0`) |
+| `ring_buffer` | **Read/Write** | Ring buffer transport adapter toggle (`true`/`1` or `false`/`0`) |
+| `abort_key` | **Read/Write** | Terminal abort key monitor toggle (`true`/`1` or `false`/`0`) |
 | *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
 | *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |

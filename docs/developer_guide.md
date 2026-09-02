@@ -125,3 +125,30 @@ void receive_zmodem_stream(void)
     zmodem_status_t res = zmodem_receive(&cbs);
 }
 ```
+
+---
+
+## 4. Advanced Console Modem Runtime Control API
+
+Header: `#include "zephyr_console_modem.h"`
+
+Developers can query and modify console modem runtime configurations at runtime:
+
+```c
+#include "zephyr_console_modem.h"
+
+void configure_modem_runtime(void)
+{
+    console_modem_settings_t cfg;
+    console_modem_settings_get(&cfg);
+
+    cfg.auto_start = true;
+    cfg.progress_bar = true;
+    cfg.async_storage = true;
+    cfg.directory_transfers = true;
+    cfg.ring_buffer = true;
+    cfg.abort_key = true;
+
+    console_modem_settings_set(&cfg);
+}
+```
