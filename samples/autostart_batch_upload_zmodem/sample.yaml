@@ -1,0 +1,7 @@
+sample:
+  name: ZMODEM Auto-Start Batch Upload Sample
+tests:
+  sample.zmodem.autostart:
+    tags: modem zmodem autostart
+    integration_platforms:
+      - qemu_x86

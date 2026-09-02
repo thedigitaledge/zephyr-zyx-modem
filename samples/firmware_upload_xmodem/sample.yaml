@@ -1,0 +1,7 @@
+sample:
+  name: XMODEM Firmware Upload Sample
+tests:
+  sample.firmware.upload:
+    tags: modem xmodem firmware
+    integration_platforms:
+      - qemu_x86

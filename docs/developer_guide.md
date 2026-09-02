@@ -227,7 +227,23 @@ void bind_secondary_uart(const struct device *uart_dev)
 
 ---
 
-## 5. Kconfig Configuration Reference
+## 5. Sample Applications Reference
+
+Standalone sample applications are available in `samples/`:
+
+* **`samples/firmware_upload_xmodem/`**: Demonstrates streaming firmware images via XMODEM-1K CRC directly into device flash / MCUBoot slot.
+* **`samples/multi_file_download_ymodem/`**: Demonstrates transmitting multiple data log files from device storage using YMODEM batch mode.
+* **`samples/autostart_batch_upload_zmodem/`**: Demonstrates monitoring console stream for `rz\r` auto-start sequence and receiving multi-file batch uploads over ZMODEM.
+
+Build any sample application using West:
+
+```bash
+west build -b <board> samples/firmware_upload_xmodem
+```
+
+---
+
+## 6. Kconfig Configuration Reference
 
 Below are the Kconfig configuration symbols defined in `Kconfig`, including their default values and detailed explanations:
 

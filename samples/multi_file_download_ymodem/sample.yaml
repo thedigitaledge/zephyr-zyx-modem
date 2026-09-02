@@ -1,0 +1,7 @@
+sample:
+  name: YMODEM Multi-File Download Sample
+tests:
+  sample.ymodem.download:
+    tags: modem ymodem batch
+    integration_platforms:
+      - qemu_x86

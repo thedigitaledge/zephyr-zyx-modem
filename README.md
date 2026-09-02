@@ -71,6 +71,10 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 │   ├── cli.md                     # Shell Command Line Interface (CLI) Guide
 │   ├── developer_guide.md         # Developer C API, Library Deployment & Kconfig Guide
 │   └── protocols.md               # Technical Protocol Specifications & Sequence Diagrams
+├── samples/                       # Standalone Zephyr OS Sample Applications
+│   ├── firmware_upload_xmodem/    # XMODEM Firmware Image Upload to Device Flash
+│   ├── multi_file_download_ymodem/# YMODEM Multi-File Batch Download from Device
+│   └── autostart_batch_upload_zmodem/# ZMODEM Auto-Start (`rz\r`) Batch Upload
 ├── tests/                         # Zephyr ztest / Twister test suite
 │   ├── src/
 │   │   └── main.c                 # ztest protocol test cases
@@ -154,6 +158,22 @@ When `CONFIG_MODEM_CONSOLE=y` and `CONFIG_FILE_SYSTEM=y` are enabled, the follow
 For full command line usage instructions, see [docs/cli.md](docs/cli.md).
 For developer C API integration examples, library deployment options, and full Kconfig symbol references, see [docs/developer_guide.md](docs/developer_guide.md).
 For technical specifications and sequence diagrams, see [docs/protocols.md](docs/protocols.md).
+
+---
+
+## Sample Applications
+
+Standalone Zephyr sample applications demonstrating specific protocol workflows are provided in `samples/`:
+
+1. **XMODEM Firmware Image Upload** (`samples/firmware_upload_xmodem/`): Streams incoming firmware images via XMODEM-1K CRC directly into device flash / MCUBoot secondary slot.
+2. **YMODEM Multi-File Download** (`samples/multi_file_download_ymodem/`): Transmits multiple data log files from device storage using YMODEM batch mode.
+3. **ZMODEM Auto-Start Batch Upload** (`samples/autostart_batch_upload_zmodem/`): Monitors console stream for `rz\r` sequence and automatically triggers ZMODEM streaming receiver for multi-file uploads.
+
+Build a sample application using West:
+
+```bash
+west build -b qemu_x86 samples/firmware_upload_xmodem
+```
 
 ---
 
