@@ -1,6 +1,7 @@
 config MODEM_CONSOLE
 	bool "Zephyr Console Modem Protocol Support"
 	default y
+	select CRC
 	help
 	  Enable XMODEM, YMODEM, and ZMODEM serial communication protocol support
 	  and shell commands for uploading/downloading files over Zephyr console.
