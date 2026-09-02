@@ -3,7 +3,9 @@
 
 # Developer API Integration Guide
 
-This guide describes how C developers can integrate the XMODEM, YMODEM, and ZMODEM protocol engines into custom Zephyr OS applications and drivers.
+This guide describes how C developers can integrate the XMODEM, YMODEM, and ZMODEM protocol engines as a library into custom Zephyr OS applications, drivers, or secondary communication tasks.
+
+For library deployment options (`west.yml`, out-of-tree CMake inclusion) and full Kconfig symbol references, see [docs/deployment.md](deployment.md).
 
 ## Architecture & Callbacks Design
 
@@ -164,5 +166,53 @@ void bind_secondary_uart(const struct device *uart_dev)
         .user_data = NULL
     };
     console_modem_bind_device(&channel);
+}
+```
+
+---
+
+## 5. Direct C Library Usage without Shell or File System Dependencies
+
+This module can be compiled and used as a pure, lightweight C protocol library without enabling `CONFIG_SHELL` or `CONFIG_FILE_SYSTEM`.
+
+### Application `prj.conf`:
+
+```kconfig
+CONFIG_CRC=y
+CONFIG_MODEM_ZMODEM=y
+# CONFIG_MODEM_CONSOLE is disabled by default when SHELL/FILE_SYSTEM are omitted
+```
+
+### Application `main.c`:
+
+```c
+#include <zephyr/kernel.h>
+#include <modem/zmodem.h>
+
+static int my_uart_read(uint8_t *b, uint32_t timeout_ms, void *user_data)
+{
+    /* Read byte directly from custom UART/SPI/Bluetooth driver */
+    return 0;
+}
+
+static int my_uart_write(const uint8_t *buf, size_t len, void *user_data)
+{
+    /* Send buffer directly to custom UART/SPI/Bluetooth driver */
+    return 0;
+}
+
+void main(void)
+{
+    zmodem_rx_callbacks_t cbs = {
+        .read_byte = my_uart_read,
+        .write_bytes = my_uart_write,
+        .on_file_start = NULL,
+        .on_data = NULL,
+        .on_file_end = NULL,
+        .user_data = NULL
+    };
+
+    /* Execute ZMODEM streaming receiver loop */
+    zmodem_receive(&cbs);
 }
 ```

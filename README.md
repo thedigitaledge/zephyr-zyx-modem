@@ -69,6 +69,7 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 │   └── zephyr_console_modem.c     # Zephyr console and shell binding
 ├── docs/                          # Detailed Guides
 │   ├── cli.md                     # Shell Command Line Interface (CLI) Guide
+│   ├── deployment.md              # Deployment, Library Integration & Kconfig Reference
 │   ├── developer_guide.md         # Developer C API Integration Guide
 │   └── protocols.md               # Technical Protocol Specifications & Sequence Diagrams
 ├── tests/                         # Zephyr ztest / Twister test suite
@@ -152,6 +153,7 @@ When `CONFIG_MODEM_CONSOLE=y` and `CONFIG_FILE_SYSTEM=y` are enabled, the follow
   `modem config [param val]`
 
 For full command line usage instructions, see [docs/cli.md](docs/cli.md).
+For library deployment options and full Kconfig symbol references, see [docs/deployment.md](docs/deployment.md).
 For developer C API integration examples, see [docs/developer_guide.md](docs/developer_guide.md).
 For technical specifications and sequence diagrams, see [docs/protocols.md](docs/protocols.md).
 
