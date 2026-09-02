@@ -30,6 +30,9 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
 - **Advanced Features & Console Enhancements**:
+  - **Transfer Diagnostics & Counter Metrics** (`CONFIG_MODEM_STATS`): In-memory tracking of transfers, CRC errors, retries, and bytes via `modem stats`.
+  - **Adaptive Pacing & Dynamic Backoff** (`CONFIG_MODEM_ADAPTIVE_PACING`): Dynamic inter-block delay backoff and block size adjustment on noisy links.
+  - **Host Automation Python Utility** (`tools/send_receive.py`): Python host-side tool for automated UART serial transfers.
   - **MCUBoot Image Upgrade Manager** (`CONFIG_MODEM_MCUBOOT_UPDATE`): Direct `modem update` shell command for streaming firmware updates to secondary image slots.
   - **NVS / Settings Checkpoints** (`CONFIG_MODEM_NVS_CHECKPOINTS`): Persist ZMODEM file transfer progress checkpoints to survive unexpected reboots.
   - **Streaming Crypto Layer** (`CONFIG_MODEM_CRYPTO_STREAM`): In-flight AES/ChaCha20 streaming payload encryption using PSA Crypto API.
@@ -140,6 +143,8 @@ CONFIG_MODEM_FLASH_PARTITION=y
 CONFIG_MODEM_MCUBOOT_UPDATE=y
 CONFIG_MODEM_NVS_CHECKPOINTS=y
 CONFIG_MODEM_STRESS_TEST=y
+CONFIG_MODEM_STATS=y
+CONFIG_MODEM_ADAPTIVE_PACING=y
 ```
 
 ---

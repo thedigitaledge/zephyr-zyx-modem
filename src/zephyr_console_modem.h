@@ -63,6 +63,30 @@ typedef struct {
 int console_modem_mcuboot_update(const char *output_filename, int protocol);
 
 /**
+ * @brief Transfer Statistics Counters
+ */
+typedef struct {
+    uint32_t total_transfers;
+    uint32_t successful_transfers;
+    uint32_t failed_transfers;
+    uint32_t crc_errors;
+    uint32_t retries;
+    size_t total_bytes_rx;
+    size_t total_bytes_tx;
+} modem_stats_t;
+
+/**
+ * @brief Get cumulative modem transfer statistics counters.
+ * @param stats Output pointer for stats structure.
+ */
+void console_modem_stats_get(modem_stats_t *stats);
+
+/**
+ * @brief Reset cumulative modem transfer statistics counters.
+ */
+void console_modem_stats_reset(void);
+
+/**
  * @brief Channel device binding context for multi-UART / multi-transport instances.
  */
 typedef struct {

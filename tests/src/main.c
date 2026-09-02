@@ -252,6 +252,14 @@ ZTEST(modem_tests, test_autostart_and_advanced_features)
     };
     int bind_res = console_modem_bind_device(&ch);
     zassert_equal(bind_res, 0, "Device channel binding failed");
+
+    /* Test transfer statistics counters */
+    modem_stats_t stats;
+    console_modem_stats_get(&stats);
+    zassert_equal(stats.crc_errors, 0, "Stats CRC error count mismatch");
+    console_modem_stats_reset();
+    console_modem_stats_get(&stats);
+    zassert_equal(stats.total_transfers, 0, "Stats reset failed");
 }
 
 ZTEST(modem_tests, test_fault_injection_stress_harness)

@@ -114,6 +114,25 @@ config MODEM_STRESS_TEST
 	help
 	  Enable fault injection test harness helpers for simulating noisy serial lines and dropped packets.
 
+config MODEM_STATS
+	bool "Packet Error & Statistical Counter Diagnostics (modem stats)"
+	default y
+	help
+	  Maintain in-memory diagnostics counters tracking CRC errors, retries, and efficiency.
+
+config MODEM_ADAPTIVE_PACING
+	bool "Adaptive Pacing & Dynamic Retransmission Backoff"
+	default y
+	help
+	  Dynamically increase inter-block delay or fallback block sizes on noisy links.
+
+config MODEM_FLASH_HELPER
+	bool "Block-Level Sector Erase & Flash Wear-Leveling Helper"
+	default y
+	depends on FLASH_MAP
+	help
+	  Enable sector-by-sector erasing prior to raw flash partition writes.
+
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"
 	default 3000

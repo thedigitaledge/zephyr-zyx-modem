@@ -141,6 +141,21 @@ static console_modem_settings_t g_modem_settings = {
 
 static console_modem_channel_t *g_active_channel = NULL;
 
+/* Transfer Statistics Counters */
+static modem_stats_t g_modem_stats = {0};
+
+void console_modem_stats_get(modem_stats_t *stats)
+{
+    if (stats) {
+        *stats = g_modem_stats;
+    }
+}
+
+void console_modem_stats_reset(void)
+{
+    memset(&g_modem_stats, 0, sizeof(g_modem_stats));
+}
+
 int console_modem_bind_device(console_modem_channel_t *channel)
 {
     g_active_channel = channel;
@@ -776,15 +791,31 @@ static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
         out_path = argv[2];
     }
 
-    if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
-        return console_modem_rx_xmodem(out_path ? out_path : "xmodem.bin");
-    } else if (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) {
-        return console_modem_rx_ymodem(out_path);
-    } else if (proto && (strcmp(proto, "zmodem") == 0 || strcmp(proto, "z") == 0)) {
-        return console_modem_rx_zmodem(out_path);
-    } else {
-        return console_modem_rx_zmodem(argv[1]);
+    if (out_path && strncmp(out_path, "flash:", 6) == 0) {
+        strncpy(g_modem_settings.flash_partition, out_path + 6, sizeof(g_modem_settings.flash_partition) - 1);
+        out_path = "flash_image.bin";
     }
+
+    g_modem_stats.total_transfers++;
+
+    int res = 0;
+    if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
+        res = console_modem_rx_xmodem(out_path ? out_path : "xmodem.bin");
+    } else if (proto && (strcmp(proto, "ymodem") == 0 || strcmp(proto, "y") == 0)) {
+        res = console_modem_rx_ymodem(out_path);
+    } else if (proto && (strcmp(proto, "zmodem") == 0 || strcmp(proto, "z") == 0)) {
+        res = console_modem_rx_zmodem(out_path);
+    } else {
+        res = console_modem_rx_zmodem(argv[1]);
+    }
+
+    if (res == 0) {
+        g_modem_stats.successful_transfers++;
+    } else {
+        g_modem_stats.failed_transfers++;
+    }
+
+    return res;
 }
 
 static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
@@ -817,6 +848,25 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
     }
 }
 #endif /* CONFIG_FILE_SYSTEM */
+
+static int cmd_modem_stats(const struct shell *sh, size_t argc, char **argv)
+{
+    if (argc > 1 && strcmp(argv[1], "reset") == 0) {
+        console_modem_stats_reset();
+        shell_print(sh, "Modem statistics reset.");
+        return 0;
+    }
+
+    shell_print(sh, "Modem Transfer Statistics:");
+    shell_print(sh, "  Total Transfers:       %u", g_modem_stats.total_transfers);
+    shell_print(sh, "  Successful Transfers:  %u", g_modem_stats.successful_transfers);
+    shell_print(sh, "  Failed Transfers:      %u", g_modem_stats.failed_transfers);
+    shell_print(sh, "  CRC Errors:            %u", g_modem_stats.crc_errors);
+    shell_print(sh, "  Packet Retries:        %u", g_modem_stats.retries);
+    shell_print(sh, "  Total Bytes Received:  %zu", g_modem_stats.total_bytes_rx);
+    shell_print(sh, "  Total Bytes Sent:      %zu", g_modem_stats.total_bytes_tx);
+    return 0;
+}
 
 static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
 {
@@ -934,6 +984,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
     SHELL_CMD_ARG(update, NULL, "Stream MCUBoot update: modem update [x|y|z] <file>", cmd_modem_rx, 1, 2),
 #endif
     SHELL_CMD_ARG(config, NULL, "Configure modem settings: modem config [param val]", cmd_modem_config, 1, 2),
+    SHELL_CMD_ARG(stats, NULL, "Display transfer stats: modem stats [reset]", cmd_modem_stats, 1, 1),
     SHELL_SUBCMD_SET_END
 );
 

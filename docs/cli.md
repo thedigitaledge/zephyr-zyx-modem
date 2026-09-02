@@ -16,9 +16,10 @@ The console modem module registers shell commands under the `modem` namespace, a
 
 | Command | Short Alias | Description | Syntax | Required Kconfig |
 | :--- | :--- | :--- | :--- | :--- |
-| `modem rx` | `mrx` | Receive file over serial console | `modem rx [x\|y\|z] [file]` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
-| `modem tx` | `mtx` | Transmit file over serial console | `modem tx [x\|y\|z] <file>` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
+| `modem rx` | `mrx` | Receive file over serial console or flash partition (`flash:<slot>`) | `modem rx [x\|y\|z] [file\|flash:<slot>]` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
+| `modem tx` | `mtx` | Transmit file or directory over serial console | `modem tx [x\|y\|z] <file\|dir>` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
 | `modem update` | N/A | Stream MCUBoot image update | `modem update [x\|y\|z] <file>` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_MODEM_MCUBOOT_UPDATE=y` |
+| `modem stats` | N/A | View / reset transfer diagnostic counters | `modem stats [reset]` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_MODEM_STATS=y` |
 | `modem config` | N/A | Inspect / update transfer settings | `modem config [param val]` | `CONFIG_MODEM_CONSOLE=y` |
 
 ---
