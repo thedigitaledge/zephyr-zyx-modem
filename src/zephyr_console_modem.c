@@ -7,9 +7,19 @@
  */
 
 #include "zephyr_console_modem.h"
+#include "crc.h"
+
+#if defined(CONFIG_MODEM_XMODEM)
 #include "modem/xmodem.h"
+#endif
+
+#if defined(CONFIG_MODEM_YMODEM)
 #include "modem/ymodem.h"
+#endif
+
+#if defined(CONFIG_MODEM_ZMODEM)
 #include "modem/zmodem.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -199,6 +209,7 @@ static void close_file(console_modem_ctx_t *ctx)
     }
 }
 
+#if defined(CONFIG_MODEM_XMODEM)
 /* XMODEM Data Callbacks */
 static int xmodem_rx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len, void *user_data)
 {
@@ -215,7 +226,9 @@ static int xmodem_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void 
     int read_b = read_file_data(ctx, offset, buf, len);
     return (read_b >= 0) ? 0 : -1;
 }
+#endif
 
+#if defined(CONFIG_MODEM_YMODEM)
 /* YMODEM RX Callbacks */
 static int ymodem_on_file_start(const ymodem_file_info_t *info, void *user_data)
 {
@@ -271,7 +284,9 @@ static int ymodem_tx_read_file_data(size_t file_index, size_t offset, uint8_t *b
     if (!ctx) return -1;
     return read_file_data(ctx, offset, buf, len);
 }
+#endif
 
+#if defined(CONFIG_MODEM_ZMODEM)
 /* ZMODEM RX Callbacks */
 static int zmodem_on_file_start(const zmodem_file_info_t *info, void *user_data)
 {
@@ -327,10 +342,12 @@ static int zmodem_tx_read_data(size_t file_index, size_t offset, uint8_t *buf, s
     if (!ctx) return -1;
     return read_file_data(ctx, offset, buf, len);
 }
+#endif
 
 /* High-level Console Receive Functions */
 int console_modem_rx_xmodem(const char *output_filename)
 {
+#if defined(CONFIG_MODEM_XMODEM)
     console_modem_ctx_t ctx = {0};
     if (output_filename) {
         snprintf(ctx.target_path, sizeof(ctx.target_path), "%s", output_filename);
@@ -355,10 +372,15 @@ int console_modem_rx_xmodem(const char *output_filename)
 
     close_file(&ctx);
     return (status == XMODEM_OK) ? 0 : -1;
+#else
+    (void)output_filename;
+    return -1;
+#endif
 }
 
 int console_modem_rx_ymodem(const char *output_filename)
 {
+#if defined(CONFIG_MODEM_YMODEM)
     console_modem_ctx_t ctx = {0};
     if (output_filename) {
         snprintf(ctx.target_path, sizeof(ctx.target_path), "%s", output_filename);
@@ -375,10 +397,15 @@ int console_modem_rx_ymodem(const char *output_filename)
 
     ymodem_status_t status = ymodem_receive(&cbs);
     return (status == YMODEM_OK) ? 0 : -1;
+#else
+    (void)output_filename;
+    return -1;
+#endif
 }
 
 int console_modem_rx_zmodem(const char *output_filename)
 {
+#if defined(CONFIG_MODEM_ZMODEM)
     console_modem_ctx_t ctx = {0};
     if (output_filename) {
         snprintf(ctx.target_path, sizeof(ctx.target_path), "%s", output_filename);
@@ -395,11 +422,16 @@ int console_modem_rx_zmodem(const char *output_filename)
 
     zmodem_status_t status = zmodem_receive(&cbs);
     return (status == ZMODEM_OK) ? 0 : -1;
+#else
+    (void)output_filename;
+    return -1;
+#endif
 }
 
 /* High-level Console Transmit Functions */
 int console_modem_tx_xmodem(const char *input_filename)
 {
+#if defined(CONFIG_MODEM_XMODEM)
     if (!input_filename) return -1;
     console_modem_ctx_t ctx = {0};
     snprintf(ctx.target_path, sizeof(ctx.target_path), "%s", input_filename);
@@ -422,10 +454,15 @@ int console_modem_tx_xmodem(const char *input_filename)
     xmodem_status_t status = xmodem_transmit(&cbs, ctx.file_size, &cfg);
     close_file(&ctx);
     return (status == XMODEM_OK) ? 0 : -1;
+#else
+    (void)input_filename;
+    return -1;
+#endif
 }
 
 int console_modem_tx_ymodem(const char *input_filename)
 {
+#if defined(CONFIG_MODEM_YMODEM)
     if (!input_filename) return -1;
     console_modem_ctx_t ctx = {0};
     snprintf(ctx.target_path, sizeof(ctx.target_path), "%s", input_filename);
@@ -443,10 +480,15 @@ int console_modem_tx_ymodem(const char *input_filename)
     ymodem_status_t status = ymodem_transmit(&cbs);
     close_file(&ctx);
     return (status == YMODEM_OK) ? 0 : -1;
+#else
+    (void)input_filename;
+    return -1;
+#endif
 }
 
 int console_modem_tx_zmodem(const char *input_filename)
 {
+#if defined(CONFIG_MODEM_ZMODEM)
     if (!input_filename) return -1;
     console_modem_ctx_t ctx = {0};
     snprintf(ctx.target_path, sizeof(ctx.target_path), "%s", input_filename);
@@ -464,6 +506,10 @@ int console_modem_tx_zmodem(const char *input_filename)
     zmodem_status_t status = zmodem_transmit(&cbs);
     close_file(&ctx);
     return (status == ZMODEM_OK) ? 0 : -1;
+#else
+    (void)input_filename;
+    return -1;
+#endif
 }
 
 #endif /* CONFIG_FILE_SYSTEM */

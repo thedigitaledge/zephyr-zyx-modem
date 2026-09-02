@@ -114,6 +114,7 @@ config MODEM_SYNC_INTERVAL_BLOCKS
 config MODEM_CONSOLE
 	bool "Zephyr Console Modem Protocol Integration"
 	default y
+	depends on FILE_SYSTEM
 	depends on MODEM_XMODEM || MODEM_YMODEM || MODEM_ZMODEM
 	help
 	  Enable shell integration for serial modem transfers and configuration.
