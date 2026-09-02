@@ -22,8 +22,10 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 
 - **Zephyr OS Console & Shell Integration**:
   - Zephyr shell commands:
-    - Receive commands: `modem rx [x|y|z] [file]` or short command `mrx [x|y|z] [file]`
-    - Transmit commands: `modem tx [x|y|z] <file>` or short command `mtx [x|y|z] <file>`
+    - Receive commands (requires `CONFIG_FILE_SYSTEM`): `modem rx [x|y|z] [file]` or short command `mrx [x|y|z] [file]`
+    - Transmit commands (requires `CONFIG_FILE_SYSTEM`): `modem tx [x|y|z] <file>` or short command `mtx [x|y|z] <file>`
+    - Configuration command: `modem config [packet_timeout|byte_timeout|max_retries <val>]`
+  - Configurable timeouts and retries via Kconfig defaults (`CONFIG_MODEM_PACKET_TIMEOUT_MS`, `CONFIG_MODEM_BYTE_TIMEOUT_MS`, `CONFIG_MODEM_MAX_RETRIES`).
   - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
@@ -40,7 +42,7 @@ This module is designed strictly as a native Zephyr OS module and integrates dir
 │   ├── xmodem.c                   # XMODEM state machine and transfers
 │   ├── ymodem.c                   # YMODEM state machine and transfers
 │   ├── zmodem.c                   # ZMODEM state machine and transfers
-│   ├── zephyr_console_modem.h     # Console modem internal definitions
+│   ├── zephyr_console_modem.h     # Console modem internal definitions and configuration
 │   └── zephyr_console_modem.c     # Zephyr console and shell binding
 ├── tests/                         # Zephyr ztest / Twister test suite
 │   ├── src/
@@ -70,6 +72,9 @@ To use this module in a Zephyr application:
    CONFIG_MODEM_XMODEM=y
    CONFIG_MODEM_YMODEM=y
    CONFIG_MODEM_ZMODEM=y
+   CONFIG_MODEM_PACKET_TIMEOUT_MS=3000
+   CONFIG_MODEM_BYTE_TIMEOUT_MS=1000
+   CONFIG_MODEM_MAX_RETRIES=10
    ```
 3. Use terminal tools like `sx` / `sb` / `sz` or `rx` / `rb` / `rz` (from `lrzsz` or Minicom) to upload and download files directly over the Zephyr shell console.
 

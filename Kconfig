@@ -25,13 +25,30 @@ config MODEM_ZMODEM
 	help
 	  Enable ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
 
+config MODEM_PACKET_TIMEOUT_MS
+	int "Default Packet Response Timeout (ms)"
+	default 3000
+	help
+	  Default timeout in milliseconds waiting for packet responses.
+
+config MODEM_BYTE_TIMEOUT_MS
+	int "Default Inter-byte Timeout (ms)"
+	default 1000
+	help
+	  Default inter-byte reception timeout in milliseconds.
+
+config MODEM_MAX_RETRIES
+	int "Default Maximum Packet Retries"
+	default 10
+	help
+	  Default maximum number of retransmissions for failed or corrupted packets.
+
 config MODEM_CONSOLE
 	bool "Zephyr Console Modem Protocol Integration"
 	default y
 	depends on FILE_SYSTEM
 	depends on MODEM_XMODEM || MODEM_YMODEM || MODEM_ZMODEM
 	help
-	  Enable shell commands (`modem rx`/`mrx`, `modem tx`/`mtx`) and
-	  Zephyr console integration for serial file uploads and downloads.
+	  Enable shell integration for serial modem transfers and configuration.
 
 endmenu

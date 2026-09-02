@@ -13,26 +13,64 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/console/console.h>
+#if defined(CONFIG_FILE_SYSTEM)
 #include <zephyr/fs/fs.h>
+#endif
+
+#if !defined(CONFIG_MODEM_PACKET_TIMEOUT_MS)
+#define CONFIG_MODEM_PACKET_TIMEOUT_MS 3000
+#endif
+
+#if !defined(CONFIG_MODEM_BYTE_TIMEOUT_MS)
+#define CONFIG_MODEM_BYTE_TIMEOUT_MS 1000
+#endif
+
+#if !defined(CONFIG_MODEM_MAX_RETRIES)
+#define CONFIG_MODEM_MAX_RETRIES 10
+#endif
+
+/* Runtime Modem Configuration */
+static console_modem_settings_t g_modem_settings = {
+    .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
+    .byte_timeout_ms = CONFIG_MODEM_BYTE_TIMEOUT_MS,
+    .max_retries = CONFIG_MODEM_MAX_RETRIES
+};
+
+void console_modem_settings_get(console_modem_settings_t *settings)
+{
+    if (settings) {
+        *settings = g_modem_settings;
+    }
+}
+
+void console_modem_settings_set(const console_modem_settings_t *settings)
+{
+    if (settings) {
+        g_modem_settings = *settings;
+    }
+}
 
 /**
  * Context structure managing current console transfer state and file handle.
  */
 typedef struct {
     const void *shell_ctx;
+#if defined(CONFIG_FILE_SYSTEM)
     struct fs_file_t zfile;
     bool zfile_open;
+#endif
     size_t file_size;
     size_t bytes_transferred;
     char target_path[256];
 } console_modem_ctx_t;
 
 /**
- * Standard I/O adapter reading a single character from Zephyr console UART.
+ * Console byte read helper.
  */
 static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 {
@@ -57,6 +95,8 @@ static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
     }
     return 0;
 }
+
+#if defined(CONFIG_FILE_SYSTEM)
 
 /**
  * Open file for writing on target storage system (Zephyr VFS).
@@ -105,7 +145,7 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
 /**
  * Read payload buffer chunk from active input file at offset.
  */
-static int read_input_file(console_modem_ctx_t *ctx, size_t offset, uint8_t *buf, size_t len)
+static int read_file_data(console_modem_ctx_t *ctx, size_t offset, uint8_t *buf, size_t len)
 {
     if (!ctx->zfile_open) return -1;
     fs_seek(&ctx->zfile, offset, FS_SEEK_SET);
@@ -137,7 +177,7 @@ static int xmodem_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void 
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
     if (!ctx) return -1;
     size_t offset = (block_num - 1) * len;
-    int read_b = read_input_file(ctx, offset, buf, len);
+    int read_b = read_file_data(ctx, offset, buf, len);
     return (read_b >= 0) ? 0 : -1;
 }
 
@@ -189,12 +229,12 @@ static int ymodem_tx_get_file_info(size_t file_index, ymodem_file_info_t *info, 
     return 0;
 }
 
-static int ymodem_tx_read_file_chunk(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
+static int ymodem_tx_read_file_data(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
 {
     (void)file_index;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
     if (!ctx) return -1;
-    return read_input_file(ctx, offset, buf, len);
+    return read_file_data(ctx, offset, buf, len);
 }
 
 /* ZMODEM RX Callbacks */
@@ -250,7 +290,7 @@ static int zmodem_tx_read_data(size_t file_index, size_t offset, uint8_t *buf, s
     (void)file_index;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
     if (!ctx) return -1;
-    return read_input_file(ctx, offset, buf, len);
+    return read_file_data(ctx, offset, buf, len);
 }
 
 /* High-level Console Receive Functions */
@@ -269,8 +309,14 @@ int console_modem_rx_xmodem(const char *output_filename)
         .user_data = &ctx
     };
 
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+    cfg.byte_timeout_ms = g_modem_settings.byte_timeout_ms;
+    cfg.packet_timeout_ms = g_modem_settings.packet_timeout_ms;
+    cfg.max_retries = g_modem_settings.max_retries;
+
     size_t total_rx = 0;
-    xmodem_status_t status = xmodem_receive(&cbs, NULL, &total_rx);
+    xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
 
     close_file(&ctx);
     return (status == XMODEM_OK) ? 0 : -1;
@@ -332,7 +378,13 @@ int console_modem_tx_xmodem(const char *input_filename)
         .user_data = &ctx
     };
 
-    xmodem_status_t status = xmodem_transmit(&cbs, ctx.file_size, NULL);
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+    cfg.byte_timeout_ms = g_modem_settings.byte_timeout_ms;
+    cfg.packet_timeout_ms = g_modem_settings.packet_timeout_ms;
+    cfg.max_retries = g_modem_settings.max_retries;
+
+    xmodem_status_t status = xmodem_transmit(&cbs, ctx.file_size, &cfg);
     close_file(&ctx);
     return (status == XMODEM_OK) ? 0 : -1;
 }
@@ -349,7 +401,7 @@ int console_modem_tx_ymodem(const char *input_filename)
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
         .get_file_info = ymodem_tx_get_file_info,
-        .read_data = ymodem_tx_read_file_chunk,
+        .read_data = ymodem_tx_read_file_data,
         .user_data = &ctx
     };
 
@@ -379,9 +431,12 @@ int console_modem_tx_zmodem(const char *input_filename)
     return (status == ZMODEM_OK) ? 0 : -1;
 }
 
+#endif /* CONFIG_FILE_SYSTEM */
+
 /* Zephyr Shell Commands Registration */
 #if defined(CONFIG_SHELL)
 
+#if defined(CONFIG_FILE_SYSTEM)
 static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
 {
     (void)sh;
@@ -402,7 +457,6 @@ static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
     } else if (proto && (strcmp(proto, "zmodem") == 0 || strcmp(proto, "z") == 0)) {
         return console_modem_rx_zmodem(out_path);
     } else {
-        /* If first argument is not protocol name, treat first arg as output file */
         return console_modem_rx_zmodem(argv[1]);
     }
 }
@@ -416,7 +470,6 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
     const char *in_path = (argc > 2) ? argv[2] : NULL;
 
     if (argc == 2) {
-        /* Default to zmodem protocol if only filename provided */
         in_path = argv[1];
         proto = "zmodem";
     }
@@ -429,18 +482,59 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
         return console_modem_tx_zmodem(in_path);
     }
 }
+#endif /* CONFIG_FILE_SYSTEM */
+
+static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
+{
+    if (argc == 1) {
+        shell_print(sh, "Modem Configuration:");
+        shell_print(sh, "  Packet Timeout: %u ms", g_modem_settings.packet_timeout_ms);
+        shell_print(sh, "  Byte Timeout:   %u ms", g_modem_settings.byte_timeout_ms);
+        shell_print(sh, "  Max Retries:    %u", g_modem_settings.max_retries);
+        return 0;
+    }
+
+    if (argc >= 3) {
+        const char *param = argv[1];
+        uint32_t val = (uint32_t)strtoul(argv[2], NULL, 10);
+
+        if (strcmp(param, "packet_timeout") == 0 || strcmp(param, "pkt_timeout") == 0) {
+            g_modem_settings.packet_timeout_ms = val;
+            shell_print(sh, "Packet timeout set to %u ms", val);
+        } else if (strcmp(param, "byte_timeout") == 0) {
+            g_modem_settings.byte_timeout_ms = val;
+            shell_print(sh, "Byte timeout set to %u ms", val);
+        } else if (strcmp(param, "max_retries") == 0 || strcmp(param, "retries") == 0) {
+            g_modem_settings.max_retries = (uint8_t)val;
+            shell_print(sh, "Max retries set to %u", val);
+        } else {
+            shell_error(sh, "Unknown configuration parameter: %s", param);
+            return -1;
+        }
+        return 0;
+    }
+
+    shell_error(sh, "Usage: modem config [packet_timeout|byte_timeout|max_retries <val>]");
+    return -1;
+}
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
+#if defined(CONFIG_FILE_SYSTEM)
     SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [x|y|z] [file]", cmd_modem_rx, 1, 2),
     SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx [x|y|z] <file>", cmd_modem_tx, 2, 1),
+#endif
+    SHELL_CMD_ARG(config, NULL, "Configure modem timeouts/retries: modem config [param val]", cmd_modem_config, 1, 2),
     SHELL_SUBCMD_SET_END
 );
 
 SHELL_CMD_REGISTER(modem, &sub_modem, "Serial transfer protocols (XMODEM/YMODEM/ZMODEM)", NULL);
+
+#if defined(CONFIG_FILE_SYSTEM)
 SHELL_CMD_REGISTER(mrx, NULL, "Short command for modem rx: mrx [x|y|z] [file]", cmd_modem_rx);
 SHELL_CMD_REGISTER(mtx, NULL, "Short command for modem tx: mtx [x|y|z] <file>", cmd_modem_tx);
-
 #endif
+
+#endif /* CONFIG_SHELL */
 
 int zephyr_console_modem_init(void)
 {

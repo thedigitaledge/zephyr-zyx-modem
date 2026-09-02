@@ -2,8 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Header file for Zephyr Console / Shell Serial Modem Integration.
- * Defines high-level API functions for receiving and transmitting files
- * over Zephyr console UART interface.
+ * Defines high-level API functions for receiving, transmitting,
+ * and configuring file transfer timeouts over Zephyr console.
  */
 
 #ifndef MODEM_ZEPHYR_CONSOLE_MODEM_H_
@@ -19,53 +19,41 @@ extern "C" {
 /**
  * @brief Initialize Zephyr console modem commands.
  *
- * Registers modem shell commands (modem rx, ry, rz, sx, sy, sz, and top-level aliases)
- * with the Zephyr shell subsystem.
+ * Registers modem shell commands with the Zephyr shell subsystem.
  *
  * @return 0 on success, negative error code on failure.
  */
 int zephyr_console_modem_init(void);
 
 /**
- * @brief Receive a file over console using XMODEM.
- * @param output_filename Target destination path on Zephyr file system.
- * @return 0 on success, negative on error.
+ * @brief Runtime Modem Transfer Settings
  */
+typedef struct {
+    uint32_t packet_timeout_ms; /**< Timeout waiting for packet responses */
+    uint32_t byte_timeout_ms;   /**< Timeout waiting for next byte */
+    uint8_t max_retries;        /**< Maximum retries per packet */
+} console_modem_settings_t;
+
+/**
+ * @brief Get current runtime modem settings.
+ * @param settings Output pointer for current settings.
+ */
+void console_modem_settings_get(console_modem_settings_t *settings);
+
+/**
+ * @brief Update runtime modem settings.
+ * @param settings Pointer to new settings.
+ */
+void console_modem_settings_set(const console_modem_settings_t *settings);
+
+/** File Receive Functions (Available when CONFIG_FILE_SYSTEM is enabled) */
 int console_modem_rx_xmodem(const char *output_filename);
-
-/**
- * @brief Receive a file over console using YMODEM.
- * @param output_filename Target destination path on Zephyr file system (or NULL to use Block 0 name).
- * @return 0 on success, negative on error.
- */
 int console_modem_rx_ymodem(const char *output_filename);
-
-/**
- * @brief Receive a file over console using ZMODEM.
- * @param output_filename Target destination path on Zephyr file system (or NULL to use ZFILE header name).
- * @return 0 on success, negative on error.
- */
 int console_modem_rx_zmodem(const char *output_filename);
 
-/**
- * @brief Transmit a file over console using XMODEM.
- * @param input_filename Path to source file on Zephyr file system.
- * @return 0 on success, negative on error.
- */
+/** File Transmit Functions (Available when CONFIG_FILE_SYSTEM is enabled) */
 int console_modem_tx_xmodem(const char *input_filename);
-
-/**
- * @brief Transmit a file over console using YMODEM.
- * @param input_filename Path to source file on Zephyr file system.
- * @return 0 on success, negative on error.
- */
 int console_modem_tx_ymodem(const char *input_filename);
-
-/**
- * @brief Transmit a file over console using ZMODEM.
- * @param input_filename Path to source file on Zephyr file system.
- * @return 0 on success, negative on error.
- */
 int console_modem_tx_zmodem(const char *input_filename);
 
 #ifdef __cplusplus
