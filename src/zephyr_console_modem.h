@@ -47,7 +47,26 @@ typedef struct {
     bool ring_buffer;              /**< Enable ring buffer UART transport adapter */
     bool abort_key;                /**< Enable terminal abort key monitoring */
     uint8_t abort_key_char;        /**< Configurable abort key ASCII byte value (default 0x03) */
+    bool flow_control;             /**< RTS/CTS hardware and XON/XOFF software flow control */
+    char flash_partition[32];      /**< Target raw flash area partition name (e.g. slot1) */
 } console_modem_settings_t;
+
+/**
+ * @brief Channel device binding context for multi-UART / multi-transport instances.
+ */
+typedef struct {
+    const struct device *uart_dev;
+    int (*read_byte)(uint8_t *byte, uint32_t timeout_ms, void *user_data);
+    int (*write_bytes)(const uint8_t *buf, size_t len, void *user_data);
+    void *user_data;
+} console_modem_channel_t;
+
+/**
+ * @brief Bind serial transfer routines to custom device channel instance.
+ * @param channel Pointer to channel binding context structure.
+ * @return 0 on success, negative on error.
+ */
+int console_modem_bind_device(console_modem_channel_t *channel);
 
 /**
  * @brief Initialize Zephyr console modem commands.

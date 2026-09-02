@@ -149,7 +149,20 @@ void configure_modem_runtime(void)
     cfg.ring_buffer = true;
     cfg.abort_key = true;
     cfg.abort_key_char = 27; /* ESC */
+    cfg.flow_control = true;
+    strncpy(cfg.flash_partition, "slot1", sizeof(cfg.flash_partition) - 1);
 
     console_modem_settings_set(&cfg);
+}
+
+void bind_secondary_uart(const struct device *uart_dev)
+{
+    console_modem_channel_t channel = {
+        .uart_dev = uart_dev,
+        .read_byte = app_read_byte,
+        .write_bytes = app_write_bytes,
+        .user_data = NULL
+    };
+    console_modem_bind_device(&channel);
 }
 ```

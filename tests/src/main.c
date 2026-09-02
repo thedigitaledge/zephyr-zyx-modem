@@ -239,6 +239,19 @@ ZTEST(modem_tests, test_autostart_and_advanced_features)
 
     console_modem_settings_get(&current);
     zassert_equal(current.abort_key_char, 27, "Updated abort_key_char setting mismatch");
+
+    /* Test flow control toggle and channel binding API */
+    current.flow_control = true;
+    console_modem_settings_set(&current);
+
+    console_modem_channel_t ch = {
+        .uart_dev = NULL,
+        .read_byte = mock_rx_read_byte,
+        .write_bytes = mock_rx_write_data,
+        .user_data = NULL
+    };
+    int bind_res = console_modem_bind_device(&ch);
+    zassert_equal(bind_res, 0, "Device channel binding failed");
 }
 
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);

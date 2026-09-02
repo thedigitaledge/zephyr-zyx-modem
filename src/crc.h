@@ -10,7 +10,12 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <zephyr/sys/crc.h>
+
+#if defined(CONFIG_MODEM_HW_CRC)
+#include <zephyr/drivers/crc.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {

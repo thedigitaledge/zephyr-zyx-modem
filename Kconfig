@@ -62,7 +62,32 @@ config MODEM_AUTO_START
 	help
 	  Enable background monitoring of console input stream for ZMODEM initiation sequence.
 
+config MODEM_ZMODEM_RLE
+	bool "Enable ZMODEM Run-Length Encoding (RLE) Data Compression"
+	default y
+	help
+	  Enable ZMODEM RLE byte compression layer for repetitive data payload streaming.
+
 endif # MODEM_ZMODEM
+
+config MODEM_HW_CRC
+	bool "Hardware-Accelerated CRC Offloading"
+	default n
+	help
+	  Enable offloading CRC16 and CRC32 calculations to Zephyr hardware CRC accelerator driver API.
+
+config MODEM_FLOW_CONTROL
+	bool "RTS/CTS Hardware & XON/XOFF Software Flow Control"
+	default y
+	help
+	  Enable hardware RTS/CTS and software XON/XOFF flow control configuration support.
+
+config MODEM_FLASH_PARTITION
+	bool "MCUBoot / Direct Flash Partition Writes"
+	default y
+	depends on FLASH_MAP
+	help
+	  Enable direct streaming uploads to raw flash partitions (e.g. MCUBoot slot1) without VFS.
 
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"

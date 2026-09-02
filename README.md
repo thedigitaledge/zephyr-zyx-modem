@@ -30,6 +30,11 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
 - **Advanced Features & Console Enhancements**:
+  - **MCUBoot / Direct Flash Partition Target** (`CONFIG_MODEM_FLASH_PARTITION`): Stream firmware updates directly to raw flash partitions (e.g., `slot1`).
+  - **RTS/CTS & XON/XOFF Flow Control** (`CONFIG_MODEM_FLOW_CONTROL`): Configure hardware and software flow control for high-speed UART links.
+  - **Multi-Device Channel Binding**: Dynamic C API binding to secondary UARTs, USB CDC-ACM, or Bluetooth SPP ports.
+  - **Hardware CRC Offloading** (`CONFIG_MODEM_HW_CRC`): Offloads CRC16 and CRC32 calculations to MCU hardware CRC accelerators.
+  - **ZMODEM RLE Compression** (`CONFIG_MODEM_ZMODEM_RLE`): Data stream compression for repetitive binary payloads.
   - **ZMODEM Auto-Start Detection** (`CONFIG_MODEM_AUTO_START`): Automatically detects `rz\r` incoming sequence to switch terminal mode dynamically.
   - **Async Storage Writes** (`CONFIG_MODEM_ASYNC_STORAGE`): Offloads disk/flash writes to background Zephyr workqueues (`k_work`).
   - **Real-time Shell Progress Bar & Metrics** (`CONFIG_MODEM_PROGRESS_BAR`): Displays transfer percentage, transferred bytes, total size, and throughput (KB/s) on console.
@@ -121,6 +126,9 @@ CONFIG_MODEM_DIRECTORY_TRANSFERS=y
 CONFIG_MODEM_RING_BUFFER=y
 CONFIG_MODEM_ABORT_KEY=y
 CONFIG_MODEM_ABORT_KEY_CHAR=3
+CONFIG_MODEM_ZMODEM_RLE=y
+CONFIG_MODEM_FLOW_CONTROL=y
+CONFIG_MODEM_FLASH_PARTITION=y
 ```
 
 ---

@@ -98,6 +98,10 @@
 #define CONFIG_MODEM_ABORT_KEY_CHAR 3
 #endif
 
+#if !defined(CONFIG_MODEM_FLOW_CONTROL)
+#define CONFIG_MODEM_FLOW_CONTROL 1
+#endif
+
 /* Runtime Modem Configuration */
 static console_modem_settings_t g_modem_settings = {
     .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
@@ -115,8 +119,18 @@ static console_modem_settings_t g_modem_settings = {
     .directory_transfers = CONFIG_MODEM_DIRECTORY_TRANSFERS,
     .ring_buffer = CONFIG_MODEM_RING_BUFFER,
     .abort_key = CONFIG_MODEM_ABORT_KEY,
-    .abort_key_char = CONFIG_MODEM_ABORT_KEY_CHAR
+    .abort_key_char = CONFIG_MODEM_ABORT_KEY_CHAR,
+    .flow_control = CONFIG_MODEM_FLOW_CONTROL,
+    .flash_partition = ""
 };
+
+static console_modem_channel_t *g_active_channel = NULL;
+
+int console_modem_bind_device(console_modem_channel_t *channel)
+{
+    g_active_channel = channel;
+    return 0;
+}
 
 void console_modem_settings_get(console_modem_settings_t *settings)
 {
@@ -795,6 +809,8 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  Ring Buffer Transport: %s", g_modem_settings.ring_buffer ? "true" : "false");
         shell_print(sh, "  Abort Key Monitor:   %s", g_modem_settings.abort_key ? "true" : "false");
         shell_print(sh, "  Abort Key Char:      0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
+        shell_print(sh, "  Flow Control:        %s", g_modem_settings.flow_control ? "true" : "false");
+        shell_print(sh, "  Flash Partition:     %s", g_modem_settings.flash_partition[0] ? g_modem_settings.flash_partition : "(none)");
         return 0;
     }
 
@@ -852,6 +868,13 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "abort_char") == 0 || strcmp(param, "abort_key_char") == 0) {
             g_modem_settings.abort_key_char = (uint8_t)val;
             shell_print(sh, "Abort key character set to 0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
+        } else if (strcmp(param, "flow_control") == 0) {
+            g_modem_settings.flow_control = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Flow control set to %s", g_modem_settings.flow_control ? "true" : "false");
+        } else if (strcmp(param, "flash_partition") == 0 || strcmp(param, "partition") == 0) {
+            strncpy(g_modem_settings.flash_partition, val_str, sizeof(g_modem_settings.flash_partition) - 1);
+            g_modem_settings.flash_partition[sizeof(g_modem_settings.flash_partition) - 1] = '\0';
+            shell_print(sh, "Target flash partition set to %s", g_modem_settings.flash_partition);
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;

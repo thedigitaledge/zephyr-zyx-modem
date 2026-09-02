@@ -49,6 +49,8 @@ extern "C" {
 #define ZCRCG       'i'     /* CRC next, frame continues non-stop */
 #define ZCRCQ       'j'     /* CRC next, send ZACK frame */
 #define ZCRCW       'k'     /* CRC next, send ZACK, end of frame */
+#define ZRUB0       'l'     /* Translate to 0177 */
+#define ZRUB1       'm'     /* Translate to 0377 */
 
 /**
  * @brief ZMODEM Operation Status Codes

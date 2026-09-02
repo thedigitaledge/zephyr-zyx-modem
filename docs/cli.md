@@ -60,6 +60,10 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_RING_BUFFER`** (bool, default `y`): Non-blocking interrupt-driven ring buffer UART adapter.
 * **`CONFIG_MODEM_ABORT_KEY`** (bool, default `y`): Monitor console stream for Ctrl-C (`0x03`) or double CAN (`0x18 0x18`) user cancellation sequences.
 * **`CONFIG_MODEM_ABORT_KEY_CHAR`** (int, default `3`): ASCII byte value used as terminal abort key (e.g. `3` for Ctrl-C / `0x03`, `27` for ESC / `0x1B`, `24` for CAN / `0x18`).
+* **`CONFIG_MODEM_ZMODEM_RLE`** (bool, default `y`): Enable ZMODEM Run-Length Encoding (RLE) byte stream compression.
+* **`CONFIG_MODEM_FLOW_CONTROL`** (bool, default `y`): RTS/CTS hardware and XON/XOFF software flow control support.
+* **`CONFIG_MODEM_FLASH_PARTITION`** (bool, default `y`): Direct streaming uploads to raw flash area partitions (MCUBoot) without VFS.
+* **`CONFIG_MODEM_HW_CRC`** (bool, default `n`): Hardware CRC driver accelerator offloading.
 
 ---
 
@@ -107,5 +111,7 @@ Modem Configuration:
 | `ring_buffer` | **Read/Write** | Ring buffer transport adapter toggle (`true`/`1` or `false`/`0`) |
 | `abort_key` | **Read/Write** | Terminal abort key monitor toggle (`true`/`1` or `false`/`0`) |
 | `abort_char` | **Read/Write** | Terminal abort key ASCII byte value (e.g. `3` for Ctrl-C, `27` for ESC) |
+| `flow_control` | **Read/Write** | Hardware RTS/CTS and software XON/XOFF flow control toggle (`true`/`false`) |
+| `flash_partition` | **Read/Write** | Target raw flash area partition name (e.g. `slot1`) |
 | *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
 | *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |

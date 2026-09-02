@@ -139,6 +139,14 @@ static int read_zdle_byte_rx(const zmodem_rx_callbacks_t *cbs, uint8_t *b)
             *b = ZDLE;
             return 0;
         }
+        if (ch == ZRUB0) {
+            *b = 0x7F;
+            return 0;
+        }
+        if (ch == ZRUB1) {
+            *b = 0xFF;
+            return 0;
+        }
         *b = ch ^ 0x40;
         return 0;
     }
