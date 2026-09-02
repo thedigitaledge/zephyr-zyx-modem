@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Kconfig definition for Zephyr Console Modem Protocols.
+
 config MODEM_CONSOLE
 	bool "Zephyr Console Modem Protocol Support"
 	default y

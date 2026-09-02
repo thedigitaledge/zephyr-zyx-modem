@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# CMakeLists.txt build file for Zephyr Console Modem Module.
+
 zephyr_include_directories(include)
 
 zephyr_library()

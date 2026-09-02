@@ -1,3 +1,10 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Header file for ZMODEM streaming file transfer protocol engine.
+ * Supports HEX, BIN16, BIN32 frames, ZDLE byte escaping, and state machine functions.
+ */
+
 #ifndef MODEM_ZMODEM_H_
 #define MODEM_ZMODEM_H_
 
@@ -42,20 +49,29 @@ extern "C" {
 #define ZCRCQ       'j'     /* CRC next, send ZACK frame */
 #define ZCRCW       'k'     /* CRC next, send ZACK, end of frame */
 
+/**
+ * @brief ZMODEM Operation Status Codes
+ */
 typedef enum {
-    ZMODEM_OK = 0,
-    ZMODEM_ERROR = -1,
-    ZMODEM_ERROR_TIMEOUT = -2,
-    ZMODEM_ERROR_CANCEL = -3,
-    ZMODEM_ERROR_CRC = -4,
-    ZMODEM_ERROR_IO = -5
+    ZMODEM_OK = 0,               /**< Transfer completed successfully */
+    ZMODEM_ERROR = -1,           /**< Unspecified protocol error */
+    ZMODEM_ERROR_TIMEOUT = -2,   /**< Timed out waiting for response */
+    ZMODEM_ERROR_CANCEL = -3,    /**< Transfer cancelled by peer */
+    ZMODEM_ERROR_CRC = -4,       /**< Frame/subpacket CRC mismatch */
+    ZMODEM_ERROR_IO = -5         /**< I/O callback failure */
 } zmodem_status_t;
 
+/**
+ * @brief ZMODEM File Metadata
+ */
 typedef struct {
-    char filename[256];
-    size_t size;
+    char filename[256]; /**< Null-terminated filename */
+    size_t size;        /**< File size in bytes */
 } zmodem_file_info_t;
 
+/**
+ * @brief ZMODEM Receiver Callback Functions
+ */
 typedef struct {
     int (*read_byte)(uint8_t *byte, uint32_t timeout_ms, void *user_data);
     int (*write_bytes)(const uint8_t *buf, size_t len, void *user_data);
@@ -65,6 +81,9 @@ typedef struct {
     void *user_data;
 } zmodem_rx_callbacks_t;
 
+/**
+ * @brief ZMODEM Transmitter Callback Functions
+ */
 typedef struct {
     int (*read_byte)(uint8_t *byte, uint32_t timeout_ms, void *user_data);
     int (*write_bytes)(const uint8_t *buf, size_t len, void *user_data);
@@ -74,15 +93,15 @@ typedef struct {
 } zmodem_tx_callbacks_t;
 
 /**
- * @brief Receive batch of files via ZMODEM protocol.
- * @param callbacks Callbacks for receiver.
+ * @brief Receive a batch of files using ZMODEM streaming protocol.
+ * @param callbacks Receiver callbacks interface.
  * @return ZMODEM_OK on success or error status.
  */
 zmodem_status_t zmodem_receive(const zmodem_rx_callbacks_t *callbacks);
 
 /**
- * @brief Transmit batch of files via ZMODEM protocol.
- * @param callbacks Callbacks for transmitter.
+ * @brief Transmit a batch of files using ZMODEM streaming protocol.
+ * @param callbacks Transmitter callbacks interface.
  * @return ZMODEM_OK on success or error status.
  */
 zmodem_status_t zmodem_transmit(const zmodem_tx_callbacks_t *callbacks);

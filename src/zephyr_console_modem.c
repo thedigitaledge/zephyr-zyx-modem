@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Zephyr Console / Shell Serial Modem Protocol Adapter.
+ * Integrates XMODEM, YMODEM, and ZMODEM file transfer routines
+ * with Zephyr shell commands and Zephyr VFS file systems.
+ */
+
 #include "modem/zephyr_console_modem.h"
 #include "modem/xmodem.h"
 #include "modem/ymodem.h"
@@ -15,7 +23,9 @@
 #endif
 #endif
 
-/* Context for console shell transfer */
+/**
+ * Context structure managing current console transfer state and file handle.
+ */
 typedef struct {
     const void *shell_ctx;
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
@@ -29,7 +39,9 @@ typedef struct {
     char target_path[256];
 } console_modem_ctx_t;
 
-/* Standard read/write adapters for Zephyr console / standard C I/O */
+/**
+ * Standard I/O adapter reading a single character from Zephyr console UART.
+ */
 static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 {
     (void)timeout_ms;
@@ -51,6 +63,9 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
 #endif
 }
 
+/**
+ * Standard I/O adapter writing bytes to Zephyr console UART.
+ */
 static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
 {
     (void)user_data;
@@ -67,6 +82,9 @@ static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
 #endif
 }
 
+/**
+ * Open file for writing on target storage system (Zephyr VFS or standard C fopen).
+ */
 static int open_output_file(console_modem_ctx_t *ctx, const char *path)
 {
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
@@ -83,6 +101,9 @@ static int open_output_file(console_modem_ctx_t *ctx, const char *path)
 #endif
 }
 
+/**
+ * Open file for reading from target storage system.
+ */
 static int open_input_file(console_modem_ctx_t *ctx, const char *path)
 {
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
@@ -109,7 +130,16 @@ static int open_input_file(console_modem_ctx_t *ctx, const char *path)
 #endif
 }
 
-static int write_output_file(console_modem_ctx_t *ctx, const uint8_t *buf, size_t len)
+/**
+ * Write payload buffer chunk to active output file.
+ */
+static int write_output_file(console_modem_ctx_t *ctx, const uint8_t *buf, size_size_t len)
+{
+    (void)len;
+    return -1;
+}
+
+static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t len)
 {
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     if (!ctx->zfile_open) return -1;
@@ -125,6 +155,9 @@ static int write_output_file(console_modem_ctx_t *ctx, const uint8_t *buf, size_
 #endif
 }
 
+/**
+ * Read payload buffer chunk from active input file at offset.
+ */
 static int read_input_file(console_modem_ctx_t *ctx, size_t offset, uint8_t *buf, size_t len)
 {
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
@@ -140,6 +173,9 @@ static int read_input_file(console_modem_ctx_t *ctx, size_t offset, uint8_t *buf
 #endif
 }
 
+/**
+ * Close active file handle on target file system.
+ */
 static void close_file(console_modem_ctx_t *ctx)
 {
 #if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
@@ -155,12 +191,12 @@ static void close_file(console_modem_ctx_t *ctx)
 #endif
 }
 
-/* XMODEM Callbacks */
+/* XMODEM Data Callbacks */
 static int xmodem_rx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len, void *user_data)
 {
     (void)block_num;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
-    return ctx ? write_output_file(ctx, buf, len) : -1;
+    return ctx ? write_file_data(ctx, buf, len) : -1;
 }
 
 static int xmodem_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void *user_data)
@@ -193,7 +229,7 @@ static int ymodem_on_data(const uint8_t *buf, size_t len, size_t offset, void *u
 {
     (void)offset;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
-    return ctx ? write_output_file(ctx, buf, len) : -1;
+    return ctx ? write_file_data(ctx, buf, len) : -1;
 }
 
 static void ymodem_on_file_end(const ymodem_file_info_t *info, ymodem_status_t status, void *user_data)
@@ -249,7 +285,7 @@ static int zmodem_on_data(const uint8_t *buf, size_t len, size_t offset, void *u
 {
     (void)offset;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
-    return ctx ? write_output_file(ctx, buf, len) : -1;
+    return ctx ? write_file_data(ctx, buf, len) : -1;
 }
 
 static void zmodem_on_file_end(const zmodem_file_info_t *info, zmodem_status_t status, void *user_data)
@@ -410,7 +446,7 @@ int console_modem_tx_zmodem(const char *input_filename)
     return (status == ZMODEM_OK) ? 0 : -1;
 }
 
-/* Zephyr Shell Commands Handlers - Avoid printing console text before protocol handshakes */
+/* Zephyr Shell Commands Registration */
 #if defined(__ZEPHYR__) && defined(CONFIG_SHELL)
 
 static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)

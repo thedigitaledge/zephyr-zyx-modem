@@ -1,3 +1,10 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Implementation of YMODEM batch file transfer protocol receiver and transmitter.
+ * Implements Block 0 file metadata negotiation and multi-file batch transfers.
+ */
+
 #include "modem/ymodem.h"
 #include "modem/xmodem.h"
 #include "modem/crc.h"
@@ -27,11 +34,15 @@ static void purge_rx(const ymodem_rx_callbacks_t *cbs)
     while (cbs->read_byte(&dummy, 100, cbs->user_data) == 0) {}
 }
 
+/**
+ * Parse YMODEM Block 0 payload containing filename and file length.
+ * Block 0 layout: <filename>\0<file length in ASCII decimal>\0...
+ */
 static void parse_block0(const uint8_t *payload, size_t len, ymodem_file_info_t *info)
 {
     memset(info, 0, sizeof(*info));
     if (payload[0] == 0) {
-        /* Empty header -> End of YMODEM batch */
+        /* Empty filename field denotes end of YMODEM batch */
         return;
     }
 
@@ -44,7 +55,7 @@ static void parse_block0(const uint8_t *payload, size_t len, ymodem_file_info_t 
 
     size_t pos = name_len + 1;
     if (pos < len && payload[pos] != 0) {
-        /* Parse file length in decimal ASCII */
+        /* Parse file length string in decimal ASCII format */
         info->size = (size_t)strtoul((const char *)&payload[pos], NULL, 10);
     }
 }
@@ -132,12 +143,12 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
         parse_block0(payload, 128, &info);
 
         if (info.filename[0] == '\0') {
-            /* Empty filename means end of YMODEM batch */
+            /* Empty filename in Block 0 signifies end of YMODEM batch */
             send_byte_rx(callbacks, XMODEM_ACK);
             return YMODEM_OK;
         }
 
-        /* ACK Block 0 and send 'C' to start data transfer for this file */
+        /* ACK Block 0 and send 'C' to request data transmission */
         send_byte_rx(callbacks, XMODEM_ACK);
         send_byte_rx(callbacks, XMODEM_C);
 
@@ -145,13 +156,12 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
             callbacks->on_file_start(&info, callbacks->user_data);
         }
 
-        /* Receive file blocks using XMODEM-1K engine state */
+        /* Step 2: Receive file contents using XMODEM 1K state logic */
         uint8_t expected_blk = 1;
         size_t file_offset = 0;
         bool file_done = false;
 
         while (!file_done) {
-            retries = 0;
             uint8_t pkt_hdr;
             if (callbacks->read_byte(&pkt_hdr, PACKET_TIMEOUT_MS, callbacks->user_data) != 0) {
                 retries++;
@@ -167,10 +177,9 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
             }
 
             if (pkt_hdr == XMODEM_EOT) {
-                /* First EOT received: NAK first EOT according to YMODEM spec */
+                /* NAK first EOT according to YMODEM specification */
                 send_byte_rx(callbacks, XMODEM_NAK);
 
-                /* Wait for second EOT */
                 uint8_t eot2;
                 if (callbacks->read_byte(&eot2, PACKET_TIMEOUT_MS, callbacks->user_data) == 0 && eot2 == XMODEM_EOT) {
                     send_byte_rx(callbacks, XMODEM_ACK);
@@ -180,7 +189,6 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
                     }
                     break;
                 } else {
-                    /* If second EOT not received or different, ACK anyway to continue batch */
                     send_byte_rx(callbacks, XMODEM_ACK);
                     file_done = true;
                     if (callbacks->on_file_end) {
@@ -252,6 +260,7 @@ ymodem_status_t ymodem_receive(const ymodem_rx_callbacks_t *callbacks)
 
                 file_offset += blk_size;
                 expected_blk++;
+                retries = 0;
                 send_byte_rx(callbacks, XMODEM_ACK);
             } else if (bnum == (uint8_t)(expected_blk - 1)) {
                 send_byte_rx(callbacks, XMODEM_ACK);
@@ -326,7 +335,6 @@ ymodem_status_t ymodem_transmit(const ymodem_tx_callbacks_t *callbacks)
         }
 
         if (has_file != 0 || info.filename[0] == '\0') {
-            /* Sent empty Block 0 -> batch completed */
             return YMODEM_OK;
         }
 

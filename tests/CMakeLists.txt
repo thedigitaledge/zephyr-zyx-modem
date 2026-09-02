@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# CMakeLists.txt build file for Zephyr ztest protocol unit tests.
+
 cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(test_zephyr_console_modem)

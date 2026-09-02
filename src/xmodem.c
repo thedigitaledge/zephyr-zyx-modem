@@ -1,3 +1,10 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Implementation of XMODEM protocol receiver and transmitter.
+ * Supports standard 128-byte block checksum, XMODEM-CRC, and XMODEM-1K variants.
+ */
+
 #include "modem/xmodem.h"
 #include "modem/crc.h"
 #include <string.h>
@@ -27,6 +34,7 @@ static xmodem_status_t send_byte(const xmodem_callbacks_t *cbs, uint8_t byte)
 static xmodem_status_t purge_rx(const xmodem_callbacks_t *cbs)
 {
     uint8_t dummy;
+    /* Purge unread bytes from serial transport pipeline until timeout */
     while (cbs->read_byte(&dummy, 100, cbs->user_data) == 0) {
         /* Purge channel */
     }
@@ -53,16 +61,18 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
     uint8_t retries = 0;
     bool crc_mode = (cfg.mode != XMODEM_MODE_STANDARD);
 
-    /* Handshake initiation */
+    /* Step 1: Send initial handshake character ('C' for CRC or NAK for checksum) */
     uint8_t req = crc_mode ? XMODEM_C : XMODEM_NAK;
     send_byte(callbacks, req);
 
     uint8_t payload[XMODEM_BLOCK_SIZE_1024];
 
+    /* Step 2: Main packet reception loop */
     while (1) {
         uint8_t header;
         int res = callbacks->read_byte(&header, cfg.packet_timeout_ms, callbacks->user_data);
 
+        /* Step 2a: Timeout handling and CRC fallback */
         if (res != 0) {
             retries++;
             if (retries > cfg.max_retries) {
@@ -79,6 +89,7 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             continue;
         }
 
+        /* Step 2b: Handle End of Transmission (EOT) */
         if (header == XMODEM_EOT) {
             send_byte(callbacks, XMODEM_ACK);
             if (total_received) {
@@ -87,8 +98,8 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             return XMODEM_OK;
         }
 
+        /* Step 2c: Handle Cancel signal (CAN) */
         if (header == XMODEM_CAN) {
-            /* Check if second CAN byte follows */
             uint8_t second_can;
             if (callbacks->read_byte(&second_can, cfg.byte_timeout_ms, callbacks->user_data) == 0 &&
                 second_can == XMODEM_CAN) {
@@ -97,13 +108,13 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             return XMODEM_ERROR_CANCEL;
         }
 
+        /* Step 2d: Validate block header size */
         size_t block_len;
         if (header == XMODEM_SOH) {
             block_len = XMODEM_BLOCK_SIZE_128;
         } else if (header == XMODEM_STX) {
             block_len = XMODEM_BLOCK_SIZE_1024;
         } else {
-            /* Invalid header byte */
             purge_rx(callbacks);
             retries++;
             if (retries > cfg.max_retries) {
@@ -114,7 +125,7 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             continue;
         }
 
-        /* Read block number and inverted block number */
+        /* Step 2e: Read and verify block sequence number */
         uint8_t blk_num, blk_num_inv;
         if (callbacks->read_byte(&blk_num, cfg.byte_timeout_ms, callbacks->user_data) != 0 ||
             callbacks->read_byte(&blk_num_inv, cfg.byte_timeout_ms, callbacks->user_data) != 0) {
@@ -131,7 +142,7 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             continue;
         }
 
-        /* Read payload */
+        /* Step 2f: Read block payload bytes */
         bool io_error = false;
         for (size_t i = 0; i < block_len; i++) {
             if (callbacks->read_byte(&payload[i], cfg.byte_timeout_ms, callbacks->user_data) != 0) {
@@ -147,7 +158,7 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             continue;
         }
 
-        /* Read checksum / CRC */
+        /* Step 2g: Check CRC or checksum */
         if (crc_mode) {
             uint8_t crc_hi, crc_lo;
             if (callbacks->read_byte(&crc_hi, cfg.byte_timeout_ms, callbacks->user_data) != 0 ||
@@ -183,7 +194,7 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             }
         }
 
-        /* Check sequence number */
+        /* Step 2h: Process validated payload or duplicate block */
         if (blk_num == expected_block) {
             if (callbacks->data_cb(expected_block, payload, block_len, callbacks->user_data) != 0) {
                 send_byte(callbacks, XMODEM_CAN);
@@ -196,10 +207,9 @@ xmodem_status_t xmodem_receive(const xmodem_callbacks_t *callbacks,
             req = XMODEM_ACK;
             send_byte(callbacks, XMODEM_ACK);
         } else if (blk_num == (uint8_t)(expected_block - 1)) {
-            /* Duplicate block, re-ACK */
+            /* Duplicate block received; acknowledge to keep sync */
             send_byte(callbacks, XMODEM_ACK);
         } else {
-            /* Fatal sequence error */
             send_byte(callbacks, XMODEM_CAN);
             send_byte(callbacks, XMODEM_CAN);
             return XMODEM_ERROR_SEQUENCE;
@@ -222,7 +232,7 @@ xmodem_status_t xmodem_transmit(const xmodem_callbacks_t *callbacks,
         xmodem_config_init(&cfg);
     }
 
-    /* Wait for receiver start signal ('C' or NAK) */
+    /* Step 1: Wait for receiver start signal ('C' or NAK) */
     uint8_t start_byte;
     uint8_t retries = 0;
     bool crc_mode = true;
@@ -249,13 +259,14 @@ xmodem_status_t xmodem_transmit(const xmodem_callbacks_t *callbacks,
     size_t bytes_sent = 0;
     uint8_t payload[XMODEM_BLOCK_SIZE_1024];
 
+    /* Step 2: Transmit file data blocks */
     while (total_len == 0 || bytes_sent < total_len) {
         size_t block_size = (cfg.mode == XMODEM_MODE_1K) ? XMODEM_BLOCK_SIZE_1024 : XMODEM_BLOCK_SIZE_128;
         if (total_len > 0 && (total_len - bytes_sent) < block_size && cfg.mode != XMODEM_MODE_1K) {
             block_size = XMODEM_BLOCK_SIZE_128;
         }
 
-        memset(payload, 0x1A, block_size); /* CPM EOF padding (0x1A) */
+        memset(payload, 0x1A, block_size); /* CPM EOF padding byte (0x1A) */
 
         int cb_res = callbacks->data_cb(block_num, payload, block_size, callbacks->user_data);
         if (cb_res < 0) {
@@ -264,7 +275,6 @@ xmodem_status_t xmodem_transmit(const xmodem_callbacks_t *callbacks,
         }
 
         if (cb_res == 0 && total_len == 0 && bytes_sent > 0) {
-            /* No more data to send in streaming mode */
             break;
         }
 
@@ -309,7 +319,7 @@ xmodem_status_t xmodem_transmit(const xmodem_callbacks_t *callbacks,
         block_num++;
     }
 
-    /* Send EOT */
+    /* Step 3: Send End of Transmission (EOT) */
     retries = 0;
     while (retries < cfg.max_retries) {
         send_byte(callbacks, XMODEM_EOT);

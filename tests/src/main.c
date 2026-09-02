@@ -1,3 +1,9 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Zephyr ztest protocol unit test suite.
+ */
+
 #include <zephyr/ztest.h>
 #include <string.h>
 
@@ -6,7 +12,7 @@
 #include "modem/ymodem.h"
 #include "modem/zmodem.h"
 
-/* Loopback pipe helper */
+/* Loopback pipe helper for mock serial I/O tests */
 #define FIFO_BUF_SIZE 4096
 
 typedef struct {

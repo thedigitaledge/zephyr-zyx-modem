@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Twister test case specification.
+
 tests:
   modem.zephyr_console_protocols:
     tags: modem ztest
