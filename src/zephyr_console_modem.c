@@ -223,8 +223,11 @@ static int xmodem_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void 
 {
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
     if (!ctx) return -1;
-    size_t offset = (block_num - 1) * len;
+    size_t offset = ctx->bytes_transferred;
     int read_b = read_file_data(ctx, offset, buf, len);
+    if (read_b > 0) {
+        ctx->bytes_transferred += (size_t)read_b;
+    }
     return (read_b >= 0) ? 0 : -1;
 }
 #endif
@@ -334,16 +337,6 @@ static int zmodem_tx_get_file_metadata(size_t file_index, zmodem_file_info_t *in
     info->filename[sizeof(info->filename) - 1] = '\0';
     info->size = ctx->file_size;
     return 0;
-}
-
-static int zmodem_tx_read_data(size_size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
-{
-    (void)file_index;
-    (void)offset;
-    (void)buf;
-    (void)len;
-    (void)user_data;
-    return -1;
 }
 
 static int zmodem_tx_read_file_bytes(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)

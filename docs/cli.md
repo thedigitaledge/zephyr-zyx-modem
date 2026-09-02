@@ -1,65 +1,61 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk> -->
 
-# Console Shell Command Line Interface (CLI) Guide
+# Console Shell Command Line Interface (CLI) & Protocol Reference Guide
 
-This guide describes how to use the Zephyr Console Modem shell commands to receive and transmit files directly over the Zephyr console UART interface.
-
-## Command Overview
-
-The console modem module registers top-level `modem` shell commands and convenience short aliases:
-
-| Long Command | Short Alias | Description | Syntax |
-| :--- | :--- | :--- | :--- |
-| `modem rx` | `mrx` | Receive file over serial console | `modem rx [x\|y\|z] [file]` |
-| `modem tx` | `mtx` | Transmit file over serial console | `modem tx [x\|y\|z] <file>` |
-| `modem config` | N/A | Inspect or update transfer parameters | `modem config [param val]` |
-
-> **Note:** File transfer commands (`rx`, `tx`, `mrx`, `mtx`) require `CONFIG_FILE_SYSTEM=y` to be enabled in `prj.conf`.
+This guide provides a comprehensive user manual, Kconfig configuration reference, and technical breakdown for the Zephyr OS Console Modem protocols (XMODEM, YMODEM, ZMODEM).
 
 ---
 
-## 1. Receiving Files (`modem rx` / `mrx`)
+## 1. Command Line Interface (CLI) Overview
 
-To upload a file from a host computer (PC) to the Zephyr target device:
+The console modem module registers shell commands under the `modem` namespace, as well as short aliases for convenient terminal usage:
 
-1. On the Zephyr shell, start the receiver:
-   ```bash
-   mrx z /SD:/firmware.bin
-   ```
-   * First argument specifies protocol: `z` (ZMODEM, default), `y` (YMODEM), or `x` (XMODEM).
-   * Second argument specifies target destination path on the Zephyr File System.
-
-2. On the host computer, trigger the file transfer using your terminal emulator (`sz`, Minicom, Tera Term, ExtraPuTTY):
-   ```bash
-   sz firmware.bin > /dev/ttyUSB0 < /dev/ttyUSB0
-   ```
+| Command | Short Alias | Description | Syntax | Required Kconfig |
+| :--- | :--- | :--- | :--- | :--- |
+| `modem rx` | `mrx` | Receive file over serial console | `modem rx [x\|y\|z] [file]` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
+| `modem tx` | `mtx` | Transmit file over serial console | `modem tx [x\|y\|z] <file>` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
+| `modem config` | N/A | Inspect / update transfer settings | `modem config [param val]` | `CONFIG_MODEM_CONSOLE=y` |
 
 ---
 
-## 2. Transmitting Files (`modem tx` / `mtx`)
+## 2. Kconfig Configuration Reference
 
-To download a file from the Zephyr target device to a host computer:
+Below are the Kconfig configuration symbols defined in `Kconfig`, including their default values and detailed explanations:
 
-1. On the host computer, prepare the receiver utility:
-   ```bash
-   rz > /dev/ttyUSB0 < /dev/ttyUSB0
-   ```
+### Protocol Engine Selection
+* **`CONFIG_MODEM_XMODEM`** (bool, default `y`): Enables the XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum).
+* **`CONFIG_MODEM_YMODEM`** (bool, default `y`): Enables the YMODEM protocol engine (Block 0 file metadata, batch transfer).
+* **`CONFIG_MODEM_ZMODEM`** (bool, default `y`): Enables the ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
 
-2. On the Zephyr shell, start the transmission:
-   ```bash
-   mtx z /SD:/logs.txt
-   ```
-   * First argument specifies protocol: `z` (ZMODEM), `y` (YMODEM), or `x` (XMODEM).
-   * Second argument specifies the source file path on the Zephyr File System.
+### Protocol Engine Defaults
+* **`CONFIG_MODEM_XMODEM_BLOCK_SIZE_1024`** (bool, default `y`): Use 1024-byte payload blocks by default for XMODEM (XMODEM-1K).
+* **`CONFIG_MODEM_XMODEM_USE_CRC`** (bool, default `y`): Use 16-bit CCITT CRC by default for XMODEM negotiation (`'C'`).
+* **`CONFIG_MODEM_ZMODEM_USE_CRC32`** (bool, default `y`): Enable 32-bit CRC (`ZBIN32`) for ZMODEM streaming.
+* **`CONFIG_MODEM_ZMODEM_ESCAPE_CTRL_CHARS`** (bool, default `y`): Escape `XON`/`XOFF` control characters via `ZDLE` to support software flow control.
+
+### Timeout, Pacing, and Retry Defaults
+* **`CONFIG_MODEM_PACKET_TIMEOUT_MS`** (int, default `3000`): Default packet response timeout in milliseconds.
+* **`CONFIG_MODEM_BYTE_TIMEOUT_MS`** (int, default `1000`): Default inter-byte reception timeout in milliseconds.
+* **`CONFIG_MODEM_MAX_RETRIES`** (int, default `10`): Maximum retry attempts for corrupted or lost packets.
+* **`CONFIG_MODEM_INTER_BLOCK_DELAY_MS`** (int, default `0`): Configurable delay inserted between transmitted blocks in milliseconds.
+* **`CONFIG_MODEM_HANDSHAKE_DELAY_MS`** (int, default `1000`): Delay between initial handshake retry attempts in milliseconds.
+
+### File Storage Policies
+* **`CONFIG_MODEM_FILE_OVERWRITE_MODE`** (int, default `0`): Policy when destination file exists on target file system:
+  * `0` = **Always Overwrite** existing file.
+  * `1` = **Skip** file transfer if file exists.
+  * `2` = **Abort** batch transfer if file exists.
+* **`CONFIG_MODEM_ENABLE_RESUME`** (bool, default `y`): Enable ZMODEM `ZRPOS` auto-resume for interrupted transfers.
+* **`CONFIG_MODEM_DEFAULT_TARGET_DIR`** (string, default `""`): Default storage mount point directory path.
+* **`CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`** (int, default `10`): Interval in received payload blocks between calling storage `fs_sync()`.
 
 ---
 
-## 3. Modem Configuration (`modem config`)
+## 3. Console Settings & Parameter Read/Write Permissions
 
-View or dynamically update modem transfer settings on the console:
+Run `modem config` on the shell to view or modify runtime parameters:
 
-### Inspect Current Settings
 ```bash
 uart:~$ modem config
 Modem Configuration:
@@ -68,20 +64,103 @@ Modem Configuration:
   Max Retries:         10
   Inter-block Delay:   0 ms
   Handshake Delay:     1000 ms
-  Overwrite Mode:      0
+  Overwrite Mode:      0 (0=Overwrite, 1=Skip, 2=Abort)
   Auto-Resume:         true
   Target Directory:    (root)
   Sync Interval:       10 blocks
 ```
 
-### Update Transfer Parameters
-```bash
-# Update packet timeout to 5000 ms
-uart:~$ modem config packet_timeout 5000
+### Parameter Permission Matrix
 
-# Update max retries
-uart:~$ modem config max_retries 15
+| Parameter Name | Read/Write Status | Description & Valid Values |
+| :--- | :--- | :--- |
+| `packet_timeout` | **Read/Write** | Packet response timeout in ms (e.g. `5000`) |
+| `byte_timeout` | **Read/Write** | Inter-byte timeout in ms (e.g. `1000`) |
+| `max_retries` | **Read/Write** | Maximum retry attempts (e.g. `10`) |
+| `inter_block_delay` | **Read/Write** | Inter-block delay in ms (e.g. `10`) |
+| `handshake_delay` | **Read/Write** | Handshake retry interval in ms (e.g. `1000`) |
+| `overwrite_mode` | **Read/Write** | **Overwrite Policy**: `0` = Overwrite, `1` = Skip, `2` = Abort |
+| `enable_resume` | **Read/Write** | Auto-resume toggle (`true`/`1` or `false`/`0`) |
+| `target_dir` | **Read/Write** | Default target folder (e.g. `/SD:`) |
+| `sync_interval` | **Read/Write** | Flash `fs_sync()` interval in blocks (0 = at file end) |
+| *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
+| *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |
 
-# Set inter-block transmit delay to 10 ms
-uart:~$ modem config inter_block_delay 10
+---
+
+## 4. Technical Protocol Breakdown & Sequence Diagrams
+
+### 4.1. XMODEM Protocol
+
+XMODEM is a stop-and-wait block protocol.
+* **Packet Layout**:
+  `[ Header (SOH/STX) | Block # | ~Block # | Data Payload (128/1024 B) | CRC16 (2 B) or Checksum (1 B) ]`
+
+```
+  Host (Sender)                             Zephyr Target (Receiver)
+       |                                                |
+       | <------------------- 'C' (Request CRC) ------- |  (Handshake)
+       |                                                |
+       | --- [SOH | 0x01 | 0xFE | Payload128 | CRC] --> |  (Block 1)
+       | <------------------- ACK --------------------- |
+       |                                                |
+       | --- [STX | 0x02 | 0xFD | Payload1024 | CRC] -> |  (Block 2)
+       | <------------------- ACK --------------------- |
+       |                                                |
+       | -------------------- EOT --------------------> |  (End of File)
+       | <------------------- ACK --------------------- |
+```
+
+---
+
+### 4.2. YMODEM Protocol
+
+YMODEM extends XMODEM-1K to support batch transfers and file metadata in **Block 0**.
+* **Block 0 Layout**:
+  `[ SOH | 0x00 | 0xFF | <Filename>\0<File Length in Decimal ASCII>\0... | CRC16 ]`
+
+```
+  Host (Sender)                             Zephyr Target (Receiver)
+       |                                                |
+       | <------------------- 'C' --------------------- |
+       | --- [SOH | 0x00 | 0xFF | "file.bin\01234" ...] ->| (Block 0 Header)
+       | <------------------- ACK --------------------- |
+       | <------------------- 'C' --------------------- | (Start Data)
+       |                                                |
+       | --- [STX | 0x01 | 0xFE | Payload1024 | CRC] -> | (Block 1)
+       | <------------------- ACK --------------------- |
+       |                                                |
+       | -------------------- EOT --------------------> | (EOT 1)
+       | <------------------- NAK --------------------- | (YMODEM NAK)
+       | -------------------- EOT --------------------> | (EOT 2)
+       | <------------------- ACK --------------------- |
+       |                                                |
+       | <------------------- 'C' --------------------- | (Request next file)
+       | --- [SOH | 0x00 | 0xFF | Null 128B | CRC] ---> | (Empty Block 0 = End)
+       | <------------------- ACK --------------------- |
+```
+
+---
+
+### 4.3. ZMODEM Protocol
+
+ZMODEM is a full-duplex streaming protocol using ZDLE escaping and HEX/BIN header frames.
+
+```
+  Host (Sender)                             Zephyr Target (Receiver)
+       |                                                |
+       | <------------------- * * ZDLE ZHEX ZRINIT ---- | (Receiver Init)
+       | --- * * ZDLE ZBIN ZFILE [filename size] ------> | (File Header)
+       | <------------------- * * ZDLE ZHEX ZRPOS 0 --- | (Resume Offset 0)
+       |                                                |
+       | --- * * ZDLE ZBIN ZDATA [Offset 0] -----------> | (Data Header)
+       | --- [Data Subpacket 1] ZDLE ZCRCG [CRC] ------> | (Stream Data)
+       | --- [Data Subpacket 2] ZDLE ZCRCW [CRC] ------> | (End Data Frame)
+       |                                                |
+       | --- * * ZDLE ZHEX ZEOF [File Size] -----------> | (End of File)
+       | <------------------- * * ZDLE ZHEX ZRINIT ---- | (ACK / Next File)
+       |                                                |
+       | --- * * ZDLE ZHEX ZFIN ----------------------> | (Finish Session)
+       | <------------------- * * ZDLE ZHEX ZFIN ------ |
+       | --- "OO" ------------------------------------> | (Over and Out)
 ```
