@@ -5,7 +5,11 @@
 
 > **Developed using Google Jules**
 
-This repository provides native Zephyr OS implementations of the standard serial file transfer protocols **XMODEM**, **YMODEM**, and **ZMODEM** designed to enable uploading and downloading files directly via the Zephyr OS console shell or embedded UART applications. It can also be integrated and used directly as a pure protocol library in custom embedded Zephyr OS applications and drivers without requiring shell or file system dependencies.
+This repository provides a production-grade Zephyr OS serial file transfer subsystem centered around three primary capabilities:
+
+1. **Serial File Upload & Download**: Fast, reliable transfer of binary files, logs, and datasets directly over serial UART, USB CDC-ACM, Bluetooth NUS, NFC, and socket connections using **XMODEM**, **YMODEM**, and **ZMODEM** protocols.
+2. **In-Field MCUBoot Firmware Flashing**: Direct streaming of firmware image updates into raw flash partitions or MCUBoot secondary slots (`slot1`) for in-field OTA/serial firmware upgrades (`modem update`).
+3. **Standalone Out-of-Tree C Library Integration**: Fully transport-agnostic C library state machines (`xmodem.h`, `ymodem.h`, `zmodem.h`) that can be integrated into custom embedded Zephyr OS applications and drivers without requiring shell or VFS dependencies.
 
 This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 
