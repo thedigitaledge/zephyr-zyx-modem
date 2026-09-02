@@ -102,6 +102,18 @@
 #define CONFIG_MODEM_FLOW_CONTROL 1
 #endif
 
+#if !defined(CONFIG_MODEM_MCUBOOT_UPDATE)
+#define CONFIG_MODEM_MCUBOOT_UPDATE 1
+#endif
+
+#if !defined(CONFIG_MODEM_NVS_CHECKPOINTS)
+#define CONFIG_MODEM_NVS_CHECKPOINTS 1
+#endif
+
+#if !defined(CONFIG_MODEM_CRYPTO_STREAM)
+#define CONFIG_MODEM_CRYPTO_STREAM 0
+#endif
+
 /* Runtime Modem Configuration */
 static console_modem_settings_t g_modem_settings = {
     .packet_timeout_ms = CONFIG_MODEM_PACKET_TIMEOUT_MS,
@@ -121,7 +133,10 @@ static console_modem_settings_t g_modem_settings = {
     .abort_key = CONFIG_MODEM_ABORT_KEY,
     .abort_key_char = CONFIG_MODEM_ABORT_KEY_CHAR,
     .flow_control = CONFIG_MODEM_FLOW_CONTROL,
-    .flash_partition = ""
+    .flash_partition = "",
+    .mcuboot_update = CONFIG_MODEM_MCUBOOT_UPDATE,
+    .nvs_checkpoints = CONFIG_MODEM_NVS_CHECKPOINTS,
+    .crypto_stream = CONFIG_MODEM_CRYPTO_STREAM
 };
 
 static console_modem_channel_t *g_active_channel = NULL;
@@ -728,6 +743,20 @@ int console_modem_tx_directory(const char *dir_path, int protocol)
 #endif
 }
 
+int console_modem_mcuboot_update(const char *output_filename, int protocol)
+{
+    if (!g_modem_settings.mcuboot_update) return -1;
+    const char *target = (output_filename && output_filename[0] != '\0') ? output_filename : "firmware.bin";
+
+    if (protocol == 1) {
+        return console_modem_rx_ymodem(target);
+    } else if (protocol == 2) {
+        return console_modem_rx_xmodem(target);
+    } else {
+        return console_modem_rx_zmodem(target);
+    }
+}
+
 #endif /* CONFIG_FILE_SYSTEM */
 
 /* Zephyr Shell Commands Registration */
@@ -811,6 +840,9 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  Abort Key Char:      0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
         shell_print(sh, "  Flow Control:        %s", g_modem_settings.flow_control ? "true" : "false");
         shell_print(sh, "  Flash Partition:     %s", g_modem_settings.flash_partition[0] ? g_modem_settings.flash_partition : "(none)");
+        shell_print(sh, "  MCUBoot Update:      %s", g_modem_settings.mcuboot_update ? "true" : "false");
+        shell_print(sh, "  NVS Checkpoints:     %s", g_modem_settings.nvs_checkpoints ? "true" : "false");
+        shell_print(sh, "  Crypto Stream:       %s", g_modem_settings.crypto_stream ? "true" : "false");
         return 0;
     }
 
@@ -875,6 +907,15 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
             strncpy(g_modem_settings.flash_partition, val_str, sizeof(g_modem_settings.flash_partition) - 1);
             g_modem_settings.flash_partition[sizeof(g_modem_settings.flash_partition) - 1] = '\0';
             shell_print(sh, "Target flash partition set to %s", g_modem_settings.flash_partition);
+        } else if (strcmp(param, "mcuboot_update") == 0) {
+            g_modem_settings.mcuboot_update = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "MCUBoot update set to %s", g_modem_settings.mcuboot_update ? "true" : "false");
+        } else if (strcmp(param, "nvs_checkpoints") == 0) {
+            g_modem_settings.nvs_checkpoints = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "NVS checkpoints set to %s", g_modem_settings.nvs_checkpoints ? "true" : "false");
+        } else if (strcmp(param, "crypto_stream") == 0) {
+            g_modem_settings.crypto_stream = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "Crypto stream set to %s", g_modem_settings.crypto_stream ? "true" : "false");
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;
@@ -890,6 +931,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
 #if defined(CONFIG_FILE_SYSTEM)
     SHELL_CMD_ARG(rx, NULL, "Receive file: modem rx [x|y|z] [file]", cmd_modem_rx, 1, 2),
     SHELL_CMD_ARG(tx, NULL, "Transmit file: modem tx [x|y|z] <file>", cmd_modem_tx, 2, 1),
+    SHELL_CMD_ARG(update, NULL, "Stream MCUBoot update: modem update [x|y|z] <file>", cmd_modem_rx, 1, 2),
 #endif
     SHELL_CMD_ARG(config, NULL, "Configure modem settings: modem config [param val]", cmd_modem_config, 1, 2),
     SHELL_SUBCMD_SET_END

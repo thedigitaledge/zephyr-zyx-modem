@@ -30,6 +30,10 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
 - **Advanced Features & Console Enhancements**:
+  - **MCUBoot Image Upgrade Manager** (`CONFIG_MODEM_MCUBOOT_UPDATE`): Direct `modem update` shell command for streaming firmware updates to secondary image slots.
+  - **NVS / Settings Checkpoints** (`CONFIG_MODEM_NVS_CHECKPOINTS`): Persist ZMODEM file transfer progress checkpoints to survive unexpected reboots.
+  - **Streaming Crypto Layer** (`CONFIG_MODEM_CRYPTO_STREAM`): In-flight AES/ChaCha20 streaming payload encryption using PSA Crypto API.
+  - **Fault Injection Stress Test Harness** (`CONFIG_MODEM_STRESS_TEST`): Synthetic noise and corruption simulation harness for testing protocol resilience.
   - **MCUBoot / Direct Flash Partition Target** (`CONFIG_MODEM_FLASH_PARTITION`): Stream firmware updates directly to raw flash partitions (e.g., `slot1`).
   - **RTS/CTS & XON/XOFF Flow Control** (`CONFIG_MODEM_FLOW_CONTROL`): Configure hardware and software flow control for high-speed UART links.
   - **Multi-Device Channel Binding**: Dynamic C API binding to secondary UARTs, USB CDC-ACM, or Bluetooth SPP ports.
@@ -129,6 +133,9 @@ CONFIG_MODEM_ABORT_KEY_CHAR=3
 CONFIG_MODEM_ZMODEM_RLE=y
 CONFIG_MODEM_FLOW_CONTROL=y
 CONFIG_MODEM_FLASH_PARTITION=y
+CONFIG_MODEM_MCUBOOT_UPDATE=y
+CONFIG_MODEM_NVS_CHECKPOINTS=y
+CONFIG_MODEM_STRESS_TEST=y
 ```
 
 ---

@@ -254,4 +254,28 @@ ZTEST(modem_tests, test_autostart_and_advanced_features)
     zassert_equal(bind_res, 0, "Device channel binding failed");
 }
 
+ZTEST(modem_tests, test_fault_injection_stress_harness)
+{
+    loopback_pipe_t pipe = {0};
+
+    xmodem_callbacks_t cbs = {
+        .read_byte = mock_rx_read_byte,
+        .write_bytes = mock_rx_write_data,
+        .data_cb = mock_rx_data_payload_cb,
+        .user_data = &pipe
+    };
+
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+    cfg.max_retries = 3;
+
+    /* Inject corrupted block header to test retry handling */
+    uint8_t corrupt_hdr[5] = { 0x99, 0xFF, 0x00, 0x11, 0x22 };
+    pipe_write_to_rx(&pipe, corrupt_hdr, sizeof(corrupt_hdr));
+
+    size_t total_rx = 0;
+    xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
+    zassert_equal(status, XMODEM_ERROR_TIMEOUT, "Expected failure on corrupted data pipe");
+}
+
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);

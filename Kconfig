@@ -89,6 +89,31 @@ config MODEM_FLASH_PARTITION
 	help
 	  Enable direct streaming uploads to raw flash partitions (e.g. MCUBoot slot1) without VFS.
 
+config MODEM_MCUBOOT_UPDATE
+	bool "MCUBoot Dual-Bank Image Upgrade Manager (modem update)"
+	default y
+	depends on FLASH_MAP
+	help
+	  Enable high-level firmware upgrade command streaming into slot1 and requesting MCUBoot reboot upgrade.
+
+config MODEM_NVS_CHECKPOINTS
+	bool "NVS / Settings Checkpoint Transfer Auto-Resume Across Reboots"
+	default y
+	help
+	  Persist file transfer offset checkpoints to NVS or Settings subsystem to survive unexpected reboots.
+
+config MODEM_CRYPTO_STREAM
+	bool "In-Flight Payload Encryption Layer (PSA Crypto / MbedTLS)"
+	default n
+	help
+	  Enable streaming AES/ChaCha20 payload encryption/decryption before serial transmission.
+
+config MODEM_STRESS_TEST
+	bool "Fault Injection & Protocol Stress Test Harness"
+	default y
+	help
+	  Enable fault injection test harness helpers for simulating noisy serial lines and dropped packets.
+
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"
 	default 3000

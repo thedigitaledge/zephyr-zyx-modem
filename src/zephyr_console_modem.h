@@ -49,7 +49,18 @@ typedef struct {
     uint8_t abort_key_char;        /**< Configurable abort key ASCII byte value (default 0x03) */
     bool flow_control;             /**< RTS/CTS hardware and XON/XOFF software flow control */
     char flash_partition[32];      /**< Target raw flash area partition name (e.g. slot1) */
+    bool mcuboot_update;           /**< MCUBoot dual-bank image upgrade manager */
+    bool nvs_checkpoints;          /**< NVS / Settings auto-resume checkpoints */
+    bool crypto_stream;            /**< In-flight payload streaming encryption */
 } console_modem_settings_t;
+
+/**
+ * @brief Stream MCUBoot image update to secondary partition slot.
+ * @param output_filename Image file or target slot name.
+ * @param protocol Protocol selector (0=ZMODEM, 1=YMODEM, 2=XMODEM).
+ * @return 0 on success, negative error code on failure.
+ */
+int console_modem_mcuboot_update(const char *output_filename, int protocol);
 
 /**
  * @brief Channel device binding context for multi-UART / multi-transport instances.

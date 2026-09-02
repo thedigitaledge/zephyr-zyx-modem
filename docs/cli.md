@@ -17,6 +17,7 @@ The console modem module registers shell commands under the `modem` namespace, a
 | :--- | :--- | :--- | :--- | :--- |
 | `modem rx` | `mrx` | Receive file over serial console | `modem rx [x\|y\|z] [file]` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
 | `modem tx` | `mtx` | Transmit file over serial console | `modem tx [x\|y\|z] <file>` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_FILE_SYSTEM=y` |
+| `modem update` | N/A | Stream MCUBoot image update | `modem update [x\|y\|z] <file>` | `CONFIG_MODEM_CONSOLE=y` & `CONFIG_MODEM_MCUBOOT_UPDATE=y` |
 | `modem config` | N/A | Inspect / update transfer settings | `modem config [param val]` | `CONFIG_MODEM_CONSOLE=y` |
 
 ---
@@ -64,6 +65,10 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_FLOW_CONTROL`** (bool, default `y`): RTS/CTS hardware and XON/XOFF software flow control support.
 * **`CONFIG_MODEM_FLASH_PARTITION`** (bool, default `y`): Direct streaming uploads to raw flash area partitions (MCUBoot) without VFS.
 * **`CONFIG_MODEM_HW_CRC`** (bool, default `n`): Hardware CRC driver accelerator offloading.
+* **`CONFIG_MODEM_MCUBOOT_UPDATE`** (bool, default `y`): MCUBoot dual-bank image upgrade manager (`modem update` command).
+* **`CONFIG_MODEM_NVS_CHECKPOINTS`** (bool, default `y`): Persist transfer progress checkpoints to NVS / Settings subsystem.
+* **`CONFIG_MODEM_CRYPTO_STREAM`** (bool, default `n`): In-flight payload streaming encryption (PSA Crypto / MbedTLS).
+* **`CONFIG_MODEM_STRESS_TEST`** (bool, default `y`): Fault injection test harness helpers for simulating noisy serial lines.
 
 ---
 
@@ -113,5 +118,8 @@ Modem Configuration:
 | `abort_char` | **Read/Write** | Terminal abort key ASCII byte value (e.g. `3` for Ctrl-C, `27` for ESC) |
 | `flow_control` | **Read/Write** | Hardware RTS/CTS and software XON/XOFF flow control toggle (`true`/`false`) |
 | `flash_partition` | **Read/Write** | Target raw flash area partition name (e.g. `slot1`) |
+| `mcuboot_update` | **Read/Write** | MCUBoot firmware upgrade manager toggle (`true`/`false`) |
+| `nvs_checkpoints` | **Read/Write** | NVS transfer auto-resume checkpoint toggle (`true`/`false`) |
+| `crypto_stream` | **Read/Write** | In-flight payload streaming encryption toggle (`true`/`false`) |
 | *`active_protocol`* | **Read-Only** | Active protocol selected during `rx`/`tx` command invocation |
 | *`bytes_transferred`*| **Read-Only** | Counter tracking total bytes written/read during active session |
