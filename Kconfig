@@ -1,0 +1,28 @@
+config MODEM_CONSOLE
+	bool "Zephyr Console Modem Protocol Support"
+	default y
+	help
+	  Enable XMODEM, YMODEM, and ZMODEM serial communication protocol support
+	  and shell commands for uploading/downloading files over Zephyr console.
+
+if MODEM_CONSOLE
+
+config MODEM_XMODEM
+	bool "XMODEM Protocol"
+	default y
+	help
+	  Enable XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum).
+
+config MODEM_YMODEM
+	bool "YMODEM Protocol"
+	default y
+	help
+	  Enable YMODEM protocol engine (Block 0 file metadata, batch transfer).
+
+config MODEM_ZMODEM
+	bool "ZMODEM Protocol"
+	default y
+	help
+	  Enable ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
+
+endif # MODEM_CONSOLE

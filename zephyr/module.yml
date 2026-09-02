@@ -1,0 +1,4 @@
+name: zephyr_console_modem
+build:
+  cmake: .
+  kconfig: Kconfig
