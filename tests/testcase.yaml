@@ -1,0 +1,5 @@
+tests:
+  modem.zephyr_console_protocols:
+    tags: modem ztest
+    integration_platforms:
+      - native_sim

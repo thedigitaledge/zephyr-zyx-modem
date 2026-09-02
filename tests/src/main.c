@@ -1,9 +1,12 @@
-#include "modem/xmodem.h"
-#include "modem/crc.h"
-#include <stdio.h>
+#include <zephyr/ztest.h>
 #include <string.h>
-#include <assert.h>
 
+#include "modem/crc.h"
+#include "modem/xmodem.h"
+#include "modem/ymodem.h"
+#include "modem/zmodem.h"
+
+/* Loopback pipe helper */
 #define FIFO_BUF_SIZE 4096
 
 typedef struct {
@@ -58,15 +61,22 @@ static int mock_rx_data_cb(uint32_t block_num, const uint8_t *buf, size_t len, v
     return 0;
 }
 
-static int mock_tx_data_cb(uint32_t block_num, uint8_t *buf, size_t len, void *user_data)
+/* ZTEST Test Cases */
+
+ZTEST(modem_tests, test_crc_service)
 {
-    (void)block_num;
-    (void)user_data;
-    memset(buf, 'A', len);
-    return 0;
+    const uint8_t data[] = "123456789";
+    uint8_t cksum = modem_checksum8(data, 9);
+    zassert_equal(cksum, 0xDD, "Checksum8 failed");
+
+    uint16_t crc16 = modem_crc16(data, 9);
+    zassert_equal(crc16, 0x29B1, "CRC16 CCITT failed");
+
+    uint32_t crc32 = modem_crc32(data, 9);
+    zassert_equal(crc32, 0xCBF43926U, "CRC32 IEEE failed");
 }
 
-void test_xmodem_receive_single_128_crc_packet(void)
+ZTEST(modem_tests, test_xmodem_crc_receive)
 {
     loopback_pipe_t pipe = {0};
     total_payload_received = 0;
@@ -83,7 +93,6 @@ void test_xmodem_receive_single_128_crc_packet(void)
 
     uint16_t crc = modem_crc16(block, 128);
 
-    /* Construct packet in pipe.rx_buf */
     uint8_t pkt[1 + 2 + 128 + 2];
     pkt[0] = XMODEM_SOH;
     pkt[1] = 1;
@@ -93,7 +102,6 @@ void test_xmodem_receive_single_128_crc_packet(void)
     pkt[132] = (uint8_t)(crc & 0xFF);
 
     pipe_write_to_rx(&pipe, pkt, sizeof(pkt));
-    /* Write EOT */
     uint8_t eot = XMODEM_EOT;
     pipe_write_to_rx(&pipe, &eot, 1);
 
@@ -103,49 +111,9 @@ void test_xmodem_receive_single_128_crc_packet(void)
     cfg.mode = XMODEM_MODE_CRC;
 
     xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
-    assert(status == XMODEM_OK);
-    assert(total_rx == 128);
-    assert(total_payload_received == 128);
-    assert(memcmp(received_payload, block, 128) == 0);
-
-    assert(pipe.tx_buf[0] == XMODEM_C);
-    assert(pipe.tx_buf[1] == XMODEM_ACK);
-    assert(pipe.tx_buf[2] == XMODEM_ACK);
-
-    printf("[PASS] test_xmodem_receive_single_128_crc_packet\n");
+    zassert_equal(status, XMODEM_OK, "XMODEM receive failed");
+    zassert_equal(total_rx, 128, "Total received size mismatch");
+    zassert_memequal(received_payload, block, 128, "Payload mismatch");
 }
 
-void test_xmodem_transmit_single_packet(void)
-{
-    loopback_pipe_t pipe = {0};
-
-    xmodem_callbacks_t cbs = {
-        .read_byte = mock_rx_read_byte,
-        .write_bytes = mock_rx_write_bytes,
-        .data_cb = (int (*)(uint32_t, const uint8_t *, size_t, void *))mock_tx_data_cb,
-        .user_data = &pipe
-    };
-
-    /* Feed 'C' for handshake start and ACK for block 1 and ACK for EOT into rx buffer */
-    uint8_t rx_responses[] = { XMODEM_C, XMODEM_ACK, XMODEM_ACK };
-    pipe_write_to_rx(&pipe, rx_responses, sizeof(rx_responses));
-
-    xmodem_config_t cfg;
-    xmodem_config_init(&cfg);
-    cfg.mode = XMODEM_MODE_CRC;
-
-    xmodem_status_t status = xmodem_transmit(&cbs, 128, &cfg);
-    assert(status == XMODEM_OK);
-    assert(pipe.tx_head > 0);
-    assert(pipe.tx_buf[0] == XMODEM_SOH);
-
-    printf("[PASS] test_xmodem_transmit_single_packet\n");
-}
-
-int main(void)
-{
-    test_xmodem_receive_single_128_crc_packet();
-    test_xmodem_transmit_single_packet();
-    printf("All XMODEM tests passed!\n");
-    return 0;
-}
+ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);

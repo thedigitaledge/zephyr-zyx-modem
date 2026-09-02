@@ -2,6 +2,8 @@
 
 This repository provides full implementations of the standard serial file transfer protocols **XMODEM**, **YMODEM**, and **ZMODEM** designed to enable uploading and downloading data directly via the Zephyr OS console / shell or standalone embedded systems.
 
+This module is designed strictly as a native Zephyr OS module and integrates directly with Zephyr's CRC service (`<zephyr/sys/crc.h>`), File System API (`<zephyr/fs/fs.h>`), Shell subsystem (`<zephyr/shell/shell.h>`), and `ztest` / Twister test framework.
+
 ## Features
 
 - **XMODEM Protocol**:
@@ -22,31 +24,32 @@ This repository provides full implementations of the standard serial file transf
   - Zephyr shell commands registered under `modem`:
     - Receive commands: `modem rx [file]`, `modem ry [file]`, `modem rz [file]` (aliases: `rx`, `ry`, `rz`)
     - Transmit commands: `modem sx <file>`, `modem sy <file>`, `modem sz <file>` (aliases: `sx`, `sy`, `sz`)
-  - Integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
+  - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
 
 ```
 ├── include/
 │   └── modem/
-│       ├── crc.h                  # CRC-16 and CRC-32 math functions
+│       ├── crc.h                  # Zephyr sys/crc.h wrapper functions
 │       ├── xmodem.h               # XMODEM protocol API definition
 │       ├── ymodem.h               # YMODEM protocol API definition
 │       ├── zmodem.h               # ZMODEM protocol API definition
 │       └── zephyr_console_modem.h # Zephyr console & shell integration
 ├── src/
-│   ├── crc.c                      # CRC computation implementations
+│   ├── crc.c                      # Checksum implementation
 │   ├── xmodem.c                   # XMODEM state machine and transfers
 │   ├── ymodem.c                   # YMODEM state machine and transfers
 │   ├── zmodem.c                   # ZMODEM state machine and transfers
 │   └── zephyr_console_modem.c     # Zephyr console and shell binding
-├── tests/                         # Comprehensive C unit tests
-│   ├── test_crc.c
-│   ├── test_xmodem.c
-│   ├── test_ymodem.c
-│   └── test_zmodem.c
-├── CMakeLists.txt                 # CMake build configuration
-├── Kconfig                        # Zephyr Kconfig options
+├── tests/                         # Zephyr ztest / Twister test suite
+│   ├── src/
+│   │   └── main.c                 # ztest protocol test cases
+│   ├── CMakeLists.txt             # Zephyr test build configuration
+│   ├── prj.conf                   # Test configuration (CONFIG_ZTEST, CONFIG_CRC)
+│   └── testcase.yaml              # Twister test case specification
+├── CMakeLists.txt                 # Zephyr module build file (zephyr_library)
+├── Kconfig                        # Zephyr Kconfig options (selects CRC)
 ├── zephyr/module.yml              # Zephyr OS module descriptor
 └── README.md
 ```
@@ -69,12 +72,10 @@ To use this module in a Zephyr application:
    ```
 3. Use terminal tools like `sx` / `sb` / `sz` or `rx` / `rb` / `rz` (from `lrzsz` or Minicom) to upload and download files directly over the Zephyr shell console.
 
-## Building and Running Unit Tests
+## Running Tests with Zephyr Twister
 
-To build and execute unit tests locally:
+To execute the test suite using Zephyr's Twister test runner:
 
 ```bash
-cmake -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
+twister -T tests/ --integration
 ```
