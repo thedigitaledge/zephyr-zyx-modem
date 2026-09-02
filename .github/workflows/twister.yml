@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
+
+name: Zephyr Twister Test Runner
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  twister:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Zephyr OS Environment
+        uses: zephyrproject-rtos/action-setup-zephyr@v1
+        with:
+          app-path: '.'
+
+      - name: Build and Run Twister Test Suite
+        run: |
+          twister -T tests/ --integration --inline-logs

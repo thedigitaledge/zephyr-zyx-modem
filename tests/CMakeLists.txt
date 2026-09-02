@@ -19,4 +19,15 @@ target_sources(app PRIVATE
     ../src/ymodem.c
     ../src/zmodem.c
     ../src/zephyr_console_modem.c
+    ../src/mcuboot_validate.c
+    ../src/modem_flash_helper.c
+    ../src/ble_nus_transport.c
+    ../src/net_socket_transport.c
+    ../src/nfc_transport.c
+    ../src/stream_decompress.c
+    ../src/delta_update.c
+    ../src/signature_verify.c
+    ../src/encrypted_stream.c
+    ../src/session_dispatcher.c
+    ../src/log_rotation.c
 )
