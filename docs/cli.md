@@ -26,9 +26,9 @@ The console modem module registers shell commands under the `modem` namespace, a
 Below are the Kconfig configuration symbols defined in `Kconfig`, including their default values and detailed explanations:
 
 ### Protocol Engine Selection
-* **`CONFIG_MODEM_XMODEM`** (bool, default `y`): Enables the XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum).
-* **`CONFIG_MODEM_YMODEM`** (bool, default `y`): Enables the YMODEM protocol engine (Block 0 file metadata, batch transfer).
-* **`CONFIG_MODEM_ZMODEM`** (bool, default `y`): Enables the ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
+* **`CONFIG_MODEM_ZMODEM`** (bool, default `y`): Enables the primary ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
+* **`CONFIG_MODEM_XMODEM`** (bool, default `n`): Enables the legacy XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum). Set to `n` by default to reduce compiled binary size.
+* **`CONFIG_MODEM_YMODEM`** (bool, default `n`): Enables the legacy YMODEM protocol engine (Block 0 file metadata, batch transfer). Set to `n` by default to reduce compiled binary size.
 
 ### Protocol Engine Defaults
 * **`CONFIG_MODEM_XMODEM_BLOCK_SIZE_1024`** (bool, default `y`): Use 1024-byte payload blocks by default for XMODEM (XMODEM-1K).

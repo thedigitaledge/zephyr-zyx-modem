@@ -7,7 +7,7 @@ menu "Zephyr Modem Protocols"
 
 config MODEM_XMODEM
 	bool "XMODEM Protocol"
-	default y
+	default n
 	select CRC
 	help
 	  Enable XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum).
@@ -30,7 +30,7 @@ endif # MODEM_XMODEM
 
 config MODEM_YMODEM
 	bool "YMODEM Protocol"
-	default y
+	default n
 	select CRC
 	help
 	  Enable YMODEM protocol engine (Block 0 file metadata, batch transfer).

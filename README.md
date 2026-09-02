@@ -90,9 +90,9 @@ CONFIG_CRC=y
 
 # Enable Modem Module & Protocol Engines
 CONFIG_MODEM_CONSOLE=y
-CONFIG_MODEM_XMODEM=y
-CONFIG_MODEM_YMODEM=y
-CONFIG_MODEM_ZMODEM=y
+CONFIG_MODEM_ZMODEM=y # Enabled by default (ZMODEM fast streaming)
+# CONFIG_MODEM_XMODEM=y # Opt-in legacy XMODEM protocol engine
+# CONFIG_MODEM_YMODEM=y # Opt-in legacy YMODEM protocol engine
 
 # Modem Protocol Settings & Defaults
 CONFIG_MODEM_XMODEM_BLOCK_SIZE_1024=y
