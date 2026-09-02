@@ -920,6 +920,7 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  Encrypted Envelope:  %s", g_modem_settings.encrypted_envelope ? "true" : "false");
         shell_print(sh, "  Session Dispatcher:  %s", g_modem_settings.session_dispatcher ? "true" : "false");
         shell_print(sh, "  Log Rotation:        %s", g_modem_settings.log_rotation ? "true" : "false");
+        shell_print(sh, "  NFC Transport:       %s", g_modem_settings.nfc_transport ? "true" : "false");
         return 0;
     }
 
@@ -1014,6 +1015,9 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "log_rotation") == 0) {
             g_modem_settings.log_rotation = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Log rotation set to %s", g_modem_settings.log_rotation ? "true" : "false");
+        } else if (strcmp(param, "nfc_transport") == 0 || strcmp(param, "nfc") == 0) {
+            g_modem_settings.nfc_transport = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
+            shell_print(sh, "NFC transport set to %s", g_modem_settings.nfc_transport ? "true" : "false");
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;

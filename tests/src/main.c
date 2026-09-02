@@ -22,6 +22,7 @@
 #include "modem/encrypted_stream.h"
 #include "modem/session_dispatcher.h"
 #include "modem/log_rotation.h"
+#include "modem/nfc_transport.h"
 #include "zephyr_console_modem.h"
 #include "mcuboot_validate.h"
 
@@ -207,6 +208,16 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     int sock_init = net_socket_transport_init(&sock_cfg);
     zassert_equal(sock_init, 0, "Network socket transport init failed");
     zassert_equal(net_socket_transport_close(NULL), 0, "Socket close failed");
+
+    nfc_transport_config_t nfc_cfg = { .rx_buffer_size = 256, .field_timeout_ms = 1000 };
+    int nfc_init = nfc_transport_init(&nfc_cfg);
+    zassert_equal(nfc_init, 0, "NFC transport init failed");
+    zassert_true(nfc_transport_is_active(), "NFC field should be active");
+
+    uint8_t nfc_sample[] = { 'N', 'F', 'C' };
+    nfc_transport_rx_callback(nfc_sample, 3);
+    zassert_equal(nfc_transport_read_byte(&b, 10, NULL), 0, "NFC read byte failed");
+    zassert_equal(b, 'N', "NFC read byte mismatch");
 }
 
 ZTEST(modem_tests, test_stream_decompress_and_delta_update)

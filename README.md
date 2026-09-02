@@ -32,7 +32,7 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 - **Advanced Features & Console Enhancements**:
   - **High-Speed Async UART DMA Adapter** (`CONFIG_MODEM_UART_DMA`): Zero-copy async UART DMA ring buffer adapter using `uart_callback_set` API.
   - **USB CDC-ACM Virtual Serial Port** (`CONFIG_MODEM_USB_CDC_ACM`): Pre-configured USB CDC-ACM virtual serial port bridge for dedicated file transfers.
-  - **Wireless & Alternative Transport Adapters**: BLE Nordic UART Service (NUS) transport (`CONFIG_MODEM_BLE_NUS`) and BSD Network Socket stream transport (`CONFIG_MODEM_NET_SOCKET`).
+  - **Wireless & Alternative Transport Adapters**: BLE Nordic UART Service (NUS) transport (`CONFIG_MODEM_BLE_NUS`), BSD Network Socket stream transport (`CONFIG_MODEM_NET_SOCKET`), and NFC NDEF serial transport (`CONFIG_MODEM_NFC`).
   - **Payload Optimization & Compression**: Stream decompression engine for Heatshrink/RLE payloads (`CONFIG_MODEM_DECOMPRESS`) and in-place binary delta patching engine (`CONFIG_MODEM_DELTA_UPDATE`).
   - **Firmware Integrity & Cryptographic Security**: Streaming signature verification (`CONFIG_MODEM_SIGNATURE_VERIFY`) and encrypted stream envelope (`CONFIG_MODEM_ENCRYPTED_STREAM`).
   - **Multi-Session Channel Dispatcher**: Concurrent transport session dispatching across multiple interfaces (`CONFIG_MODEM_SESSION_DISPATCHER`).
@@ -73,6 +73,7 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
 │       ├── encrypted_stream.h     # Encrypted transport envelope
 │       ├── log_rotation.h         # Wear-aware log rotation and chunking
 │       ├── net_socket_transport.h # BSD network socket transport wrapper
+│       ├── nfc_transport.h        # NFC NDEF serial transport interface
 │       ├── session_dispatcher.h   # Multi-session channel dispatcher
 │       ├── signature_verify.h     # Cryptographic signature verification
 │       ├── stream_decompress.h    # Stream decompression engine

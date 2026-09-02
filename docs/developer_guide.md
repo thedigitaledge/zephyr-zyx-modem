@@ -308,3 +308,4 @@ Below are the Kconfig configuration symbols defined in `Kconfig`, including thei
 * **`CONFIG_MODEM_ENCRYPTED_STREAM`** (bool, default `y`): Encrypted transport stream payload envelope.
 * **`CONFIG_MODEM_SESSION_DISPATCHER`** (bool, default `y`): Multi-session transport channel dispatcher and multiplexer.
 * **`CONFIG_MODEM_LOG_ROTATION`** (bool, default `y`): Flash storage wear-aware log chunking and automated rotation.
+* **`CONFIG_MODEM_NFC`** (bool, default `y`): Near Field Communication (NFC) NDEF serial modem transport adapter.

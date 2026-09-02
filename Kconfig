@@ -201,6 +201,12 @@ config MODEM_LOG_ROTATION
 	help
 	  Enable flash sector wear-aware log chunking and automated rotation.
 
+config MODEM_NFC
+	bool "NFC Data Communications Transport Adapter"
+	default y
+	help
+	  Enable Near Field Communication (NFC) NDEF serial modem transport adapter.
+
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"
 	default 3000

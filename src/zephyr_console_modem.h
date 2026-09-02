@@ -59,6 +59,7 @@ typedef struct {
     bool encrypted_envelope;       /**< Encrypted stream payload envelope */
     bool session_dispatcher;       /**< Multi-session transport dispatcher */
     bool log_rotation;             /**< Wear-aware log rotation */
+    bool nfc_transport;            /**< NFC data communications transport */
 } console_modem_settings_t;
 
 /**
