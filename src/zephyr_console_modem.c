@@ -14,26 +14,18 @@
 #include <stdio.h>
 #include <string.h>
 
-#if defined(__ZEPHYR__)
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/console/console.h>
-#if defined(CONFIG_FILE_SYSTEM)
 #include <zephyr/fs/fs.h>
-#endif
-#endif
 
 /**
  * Context structure managing current console transfer state and file handle.
  */
 typedef struct {
     const void *shell_ctx;
-#if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     struct fs_file_t zfile;
     bool zfile_open;
-#else
-    FILE *file_handle;
-#endif
     size_t file_size;
     size_t bytes_transferred;
     char target_path[256];
@@ -46,21 +38,12 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
 {
     (void)timeout_ms;
     (void)user_data;
-#if defined(__ZEPHYR__)
     int ch = console_getchar();
     if (ch < 0) {
         return -1;
     }
     *byte = (uint8_t)ch;
     return 0;
-#else
-    int c = getchar();
-    if (c == EOF) {
-        return -1;
-    }
-    *byte = (uint8_t)c;
-    return 0;
-#endif
 }
 
 /**
@@ -69,25 +52,17 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
 static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
 {
     (void)user_data;
-#if defined(__ZEPHYR__)
     for (size_t i = 0; i < len; i++) {
         console_putchar(buf[i]);
     }
     return 0;
-#else
-    size_t written = fwrite(buf, 1, len, stdout);
-    (void)written;
-    fflush(stdout);
-    return 0;
-#endif
 }
 
 /**
- * Open file for writing on target storage system (Zephyr VFS or standard C fopen).
+ * Open file for writing on target storage system (Zephyr VFS).
  */
 static int open_output_file(console_modem_ctx_t *ctx, const char *path)
 {
-#if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     fs_file_t_init(&ctx->zfile);
     int res = fs_open(&ctx->zfile, path, FS_O_CREATE | FS_O_WRITE);
     if (res == 0) {
@@ -95,18 +70,13 @@ static int open_output_file(console_modem_ctx_t *ctx, const char *path)
         return 0;
     }
     return -1;
-#else
-    ctx->file_handle = fopen(path, "wb");
-    return (ctx->file_handle != NULL) ? 0 : -1;
-#endif
 }
 
 /**
- * Open file for reading from target storage system.
+ * Open file for reading from target storage system (Zephyr VFS).
  */
 static int open_input_file(console_modem_ctx_t *ctx, const char *path)
 {
-#if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     fs_file_t_init(&ctx->zfile);
     int res = fs_open(&ctx->zfile, path, FS_O_READ);
     if (res == 0) {
@@ -118,16 +88,6 @@ static int open_input_file(console_modem_ctx_t *ctx, const char *path)
         return 0;
     }
     return -1;
-#else
-    ctx->file_handle = fopen(path, "rb");
-    if (ctx->file_handle) {
-        fseek(ctx->file_handle, 0, SEEK_END);
-        ctx->file_size = (size_t)ftell(ctx->file_handle);
-        fseek(ctx->file_handle, 0, SEEK_SET);
-        return 0;
-    }
-    return -1;
-#endif
 }
 
 /**
@@ -135,18 +95,11 @@ static int open_input_file(console_modem_ctx_t *ctx, const char *path)
  */
 static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t len)
 {
-#if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     if (!ctx->zfile_open) return -1;
     ssize_t res = fs_write(&ctx->zfile, buf, len);
     if (res < 0) return -1;
     ctx->bytes_transferred += (size_t)res;
     return ((size_t)res == len) ? 0 : -1;
-#else
-    if (!ctx->file_handle) return -1;
-    size_t written = fwrite(buf, 1, len, ctx->file_handle);
-    ctx->bytes_transferred += written;
-    return (written == len) ? 0 : -1;
-#endif
 }
 
 /**
@@ -154,17 +107,10 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
  */
 static int read_input_file(console_modem_ctx_t *ctx, size_t offset, uint8_t *buf, size_t len)
 {
-#if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     if (!ctx->zfile_open) return -1;
     fs_seek(&ctx->zfile, offset, FS_SEEK_SET);
     ssize_t res = fs_read(&ctx->zfile, buf, len);
     return (res >= 0) ? (int)res : -1;
-#else
-    if (!ctx->file_handle) return -1;
-    fseek(ctx->file_handle, (long)offset, SEEK_SET);
-    size_t read_bytes = fread(buf, 1, len, ctx->file_handle);
-    return (int)read_bytes;
-#endif
 }
 
 /**
@@ -172,17 +118,10 @@ static int read_input_file(console_modem_ctx_t *ctx, size_t offset, uint8_t *buf
  */
 static void close_file(console_modem_ctx_t *ctx)
 {
-#if defined(__ZEPHYR__) && defined(CONFIG_FILE_SYSTEM)
     if (ctx->zfile_open) {
         fs_close(&ctx->zfile);
         ctx->zfile_open = false;
     }
-#else
-    if (ctx->file_handle) {
-        fclose(ctx->file_handle);
-        ctx->file_handle = NULL;
-    }
-#endif
 }
 
 /* XMODEM Data Callbacks */
@@ -441,7 +380,7 @@ int console_modem_tx_zmodem(const char *input_filename)
 }
 
 /* Zephyr Shell Commands Registration */
-#if defined(__ZEPHYR__) && defined(CONFIG_SHELL)
+#if defined(CONFIG_SHELL)
 
 static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
 {
