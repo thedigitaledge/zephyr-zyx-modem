@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of 8-bit arithmetic checksum utility.
  */

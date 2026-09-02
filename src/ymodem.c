@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of YMODEM batch file transfer protocol receiver and transmitter.
  * Implements Block 0 file metadata negotiation and multi-file batch transfers.

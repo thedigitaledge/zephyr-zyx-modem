@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Header file for ZMODEM streaming file transfer protocol engine.
  * Supports HEX, BIN16, BIN32 frames, ZDLE byte escaping, and state machine functions.

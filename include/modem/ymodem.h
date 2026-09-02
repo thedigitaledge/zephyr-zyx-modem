@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Header file for YMODEM batch file transfer protocol engine.
  * Supports Block 0 file metadata parsing, 128-byte and 1024-byte payloads, and batch transfers.

@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Header file for Zephyr Console / Shell Serial Modem Integration.
  * Defines high-level API functions for receiving, transmitting,

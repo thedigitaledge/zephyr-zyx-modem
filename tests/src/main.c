@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Zephyr ztest protocol unit test suite covering CRC, XMODEM, YMODEM,
  * ZMODEM, transfer timeouts, transfer failures, and console configuration settings.

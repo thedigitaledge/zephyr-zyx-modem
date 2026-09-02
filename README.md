@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk> -->
 
 # Zephyr Console Serial Modem Protocols (XMODEM / YMODEM / ZMODEM)
 
@@ -28,7 +29,14 @@ This project is licensed under the **Apache License Version 2.0** (`LICENSE`).
   - Support for 32-bit CRC (`CONFIG_MODEM_ZMODEM_USE_CRC32`).
   - Frame state machine handling `ZRQINIT`, `ZRINIT`, `ZFILE`, `ZDATA`, `ZEOF`, `ZFIN`, and `ZRPOS` auto-resume (`CONFIG_MODEM_ENABLE_RESUME`).
 
----
+- **Zephyr OS Console & Shell Integration**:
+  - Zephyr shell commands:
+    - Receive commands (requires `CONFIG_FILE_SYSTEM`): `modem rx [x|y|z] [file]` or short command `mrx [x|y|z] [file]`
+    - Transmit commands (requires `CONFIG_FILE_SYSTEM`): `modem tx [x|y|z] <file>` or short command `mtx [x|y|z] <file>`
+    - Configuration command: `modem config [param val]`
+  - Configurable timeouts and pacing via Kconfig defaults (`CONFIG_MODEM_PACKET_TIMEOUT_MS`, `CONFIG_MODEM_BYTE_TIMEOUT_MS`, `CONFIG_MODEM_MAX_RETRIES`, `CONFIG_MODEM_INTER_BLOCK_DELAY_MS`, `CONFIG_MODEM_HANDSHAKE_DELAY_MS`).
+  - Configurable file storage policy (`CONFIG_MODEM_FILE_OVERWRITE_MODE`, `CONFIG_MODEM_DEFAULT_TARGET_DIR`, `CONFIG_MODEM_SYNC_INTERVAL_BLOCKS`).
+  - Full integration with Zephyr File System API (`<zephyr/fs/fs.h>`) and Zephyr CRC service (`<zephyr/sys/crc.h>`).
 
 ## Project Structure
 

@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of XMODEM protocol receiver and transmitter.
  * Supports standard 128-byte block checksum, XMODEM-CRC, and XMODEM-1K variants.

@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Zephyr Console / Shell Serial Modem Protocol Adapter.
  * Integrates XMODEM, YMODEM, and ZMODEM file transfer routines
@@ -335,7 +336,17 @@ static int zmodem_tx_get_file_metadata(size_t file_index, zmodem_file_info_t *in
     return 0;
 }
 
-static int zmodem_tx_read_data(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
+static int zmodem_tx_read_data(size_size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
+{
+    (void)file_index;
+    (void)offset;
+    (void)buf;
+    (void)len;
+    (void)user_data;
+    return -1;
+}
+
+static int zmodem_tx_read_file_bytes(size_t file_index, size_t offset, uint8_t *buf, size_t len, void *user_data)
 {
     (void)file_index;
     console_modem_ctx_t *ctx = (console_modem_ctx_t *)user_data;
@@ -499,7 +510,7 @@ int console_modem_tx_zmodem(const char *input_filename)
         .read_byte = console_read_byte,
         .write_bytes = console_write_bytes,
         .get_file_info = zmodem_tx_get_file_metadata,
-        .read_data = zmodem_tx_read_data,
+        .read_data = zmodem_tx_read_file_bytes,
         .user_data = &ctx
     };
 

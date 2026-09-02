@@ -1,5 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of ZMODEM streaming file transfer protocol receiver and transmitter.
  * Supports HEX ('B'), BIN16 ('A'), BIN32 ('C') headers, ZDLE byte escape processing,
