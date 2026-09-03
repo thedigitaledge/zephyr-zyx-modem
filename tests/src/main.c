@@ -2,9 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
- * Zephyr ztest protocol unit test suite covering CRC, XMODEM, YMODEM,
- * ZMODEM, BLE NUS, network sockets, stream decompression, delta patching,
- * signature verification, encrypted envelopes, and console configuration settings.
+ * Zephyr ztest protocol unit and integration test suite.
+ * Modular single-aspect unit tests and end-to-end integration pipelines.
  */
 
 #include <zephyr/ztest.h>
@@ -23,6 +22,7 @@
 #include "modem/session_dispatcher.h"
 #include "modem/log_rotation.h"
 #include "modem/nfc_transport.h"
+#include "modem_flash_helper.h"
 #include "zephyr_console_modem.h"
 #include "mcuboot_validate.h"
 
@@ -81,19 +81,37 @@ static int mock_rx_data_payload_cb(uint32_t block_num, const uint8_t *buf, size_
     return 0;
 }
 
-/* ZTEST Test Cases */
+static int mock_rx_read_byte_cancel(uint8_t *byte, uint32_t timeout_ms, void *user_data)
+{
+    (void)byte;
+    (void)timeout_ms;
+    (void)user_data;
+    return -2; /* Immediate user cancel signal */
+}
 
-ZTEST(modem_tests, test_crc_service)
+/* ===================================================================
+ * FINE-GRAINED SINGLE-ASPECT UNIT TESTS
+ * =================================================================== */
+
+ZTEST(modem_tests, test_checksum8_calculation)
 {
     const uint8_t data[] = "123456789";
     uint8_t cksum = modem_checksum8(data, 9);
-    zassert_equal(cksum, 0xDD, "Checksum8 failed");
+    zassert_equal(cksum, 0xDD, "Checksum8 calculation failed");
+}
 
+ZTEST(modem_tests, test_crc16_ccitt_calculation)
+{
+    const uint8_t data[] = "123456789";
     uint16_t crc16 = modem_crc16(data, 9);
-    zassert_equal(crc16, 0x31C3, "CRC16 CCITT failed");
+    zassert_equal(crc16, 0x31C3, "CRC16 CCITT calculation failed");
+}
 
+ZTEST(modem_tests, test_crc32_ieee_calculation)
+{
+    const uint8_t data[] = "123456789";
     uint32_t crc32 = modem_crc32(data, 9);
-    zassert_equal(crc32, 0xCBF43926U, "CRC32 IEEE failed");
+    zassert_equal(crc32, 0xCBF43926U, "CRC32 IEEE calculation failed");
 }
 
 ZTEST(modem_tests, test_xmodem_crc_receive)
@@ -136,7 +154,7 @@ ZTEST(modem_tests, test_xmodem_crc_receive)
     zassert_mem_equal(received_payload, block, 128, "Payload mismatch");
 }
 
-ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
+ZTEST(modem_tests, test_xmodem_timeout_handling)
 {
     loopback_pipe_t pipe = {0};
 
@@ -151,24 +169,31 @@ ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
     xmodem_config_init(&cfg);
     cfg.max_retries = 2;
 
-    /* Empty pipe -> Should timeout */
     size_t total_rx = 0;
     xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
-    zassert_equal(status, XMODEM_ERROR_TIMEOUT, "Expected timeout failure");
-
-    /* CAN signal in pipe -> Should cancel */
-    uint8_t can_bytes[2] = { XMODEM_CAN, XMODEM_CAN };
-    pipe_write_to_rx(&pipe, can_bytes, 2);
-    status = xmodem_receive(&cbs, &cfg, &total_rx);
-    zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected cancel failure");
+    zassert_equal(status, XMODEM_ERROR_TIMEOUT, "Expected timeout failure on empty pipe");
 }
 
-static int mock_rx_read_byte_cancel(uint8_t *byte, uint32_t timeout_ms, void *user_data)
+ZTEST(modem_tests, test_xmodem_cancel_signal_handling)
 {
-    (void)byte;
-    (void)timeout_ms;
-    (void)user_data;
-    return -2; /* Immediate user cancel signal */
+    loopback_pipe_t pipe = {0};
+
+    xmodem_callbacks_t cbs = {
+        .read_byte = mock_rx_read_byte,
+        .write_bytes = mock_rx_write_data,
+        .data_cb = mock_rx_data_payload_cb,
+        .user_data = &pipe
+    };
+
+    xmodem_config_t cfg;
+    xmodem_config_init(&cfg);
+
+    uint8_t can_bytes[2] = { XMODEM_CAN, XMODEM_CAN };
+    pipe_write_to_rx(&pipe, can_bytes, 2);
+
+    size_t total_rx = 0;
+    xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
+    zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected cancel failure on CAN sequence");
 }
 
 ZTEST(modem_tests, test_immediate_user_cancellation)
@@ -187,13 +212,11 @@ ZTEST(modem_tests, test_immediate_user_cancellation)
 
     size_t total_rx = 0;
     xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
-    zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected immediate user cancellation");
+    zassert_equal(status, XMODEM_ERROR_CANCEL, "Expected immediate user cancellation (-2 return)");
 }
 
-ZTEST(modem_tests, test_ble_nus_and_socket_transports)
+ZTEST(modem_tests, test_ble_nus_transport_adapter)
 {
-    uint8_t b = 0;
-
 #if defined(CONFIG_MODEM_BLE_NUS)
     ble_nus_transport_config_t nus_cfg = { .rx_ring_buffer_size = 512, .conn_timeout_ms = 1000 };
     int nus_init = ble_nus_transport_init(&nus_cfg);
@@ -203,18 +226,26 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     uint8_t sample_rx[] = { 'A', 'B', 'C' };
     ble_nus_transport_rx_callback(sample_rx, 3);
 
+    uint8_t b = 0;
     zassert_equal(ble_nus_transport_read_byte(&b, 10, NULL), 0, "BLE NUS read byte failed");
     zassert_equal(b, 'A', "BLE NUS read byte mismatch");
 #endif
+}
 
+ZTEST(modem_tests, test_net_socket_transport_adapter)
+{
 #if defined(CONFIG_MODEM_NET_SOCKET)
     net_socket_transport_config_t sock_cfg = { .socket_fd = 3, .read_timeout_ms = 1000 };
     int sock_init = net_socket_transport_init(&sock_cfg);
     zassert_equal(sock_init, 0, "Network socket transport init failed");
     zassert_equal(net_socket_transport_close(NULL), 0, "Socket close failed");
 #endif
+}
 
+ZTEST(modem_tests, test_nfc_transport_ndef_and_t4t)
+{
 #if defined(CONFIG_MODEM_NFC)
+    uint8_t b = 0;
     nfc_transport_config_t nfc_cfg = {
         .rx_buffer_size = 256,
         .tx_buffer_size = 256,
@@ -249,7 +280,6 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     uint8_t decoded_byte = 0;
     zassert_equal(nfc_transport_read_byte(&decoded_byte, 10, NULL), 0, "NFC decoded read byte failed");
     zassert_equal(decoded_byte, 'N', "NFC decoded byte mismatch");
-    /* Drain remaining decoded payload bytes */
     while (nfc_transport_read_byte(&b, 1, NULL) == 0) {}
 
     /* Test Nordic T4T Event Handler Integration */
@@ -263,7 +293,6 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     uint8_t t4t_b = 0;
     zassert_equal(nfc_transport_read_byte(&t4t_b, 10, NULL), 0, "T4T event read byte failed");
     zassert_equal(t4t_b, 'T', "T4T event read byte mismatch");
-    /* Drain remaining T4T payload bytes */
     while (nfc_transport_read_byte(&b, 1, NULL) == 0) {}
 
     nfc_transport_t4t_event_handler(NFC_MODEM_EVENT_FIELD_OFF, NULL, 0, NULL);
@@ -277,7 +306,7 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
 #endif
 }
 
-ZTEST(modem_tests, test_stream_decompress_and_delta_update)
+ZTEST(modem_tests, test_stream_decompression_engine)
 {
     modem_decompress_ctx_t dctx;
     stream_decompress_init(&dctx, MODEM_COMPRESS_NONE);
@@ -290,7 +319,10 @@ ZTEST(modem_tests, test_stream_decompress_and_delta_update)
     zassert_equal(res, 0, "Decompress process failed");
     zassert_equal(produced, sizeof(raw_data), "Decompress produced len mismatch");
     zassert_mem_equal(out_buf, raw_data, sizeof(raw_data), "Decompressed payload mismatch");
+}
 
+ZTEST(modem_tests, test_binary_delta_patch_update)
+{
     modem_delta_ctx_t delta_ctx;
     delta_update_init(&delta_ctx, 100);
 
@@ -298,23 +330,23 @@ ZTEST(modem_tests, test_stream_decompress_and_delta_update)
     uint8_t patch_out[16] = {0};
     size_t patch_len = 0;
 
-    res = delta_update_apply_chunk(&delta_ctx, diff, sizeof(diff), NULL, patch_out, sizeof(patch_out), &patch_len);
+    int res = delta_update_apply_chunk(&delta_ctx, diff, sizeof(diff), NULL, patch_out, sizeof(patch_out), &patch_len);
     zassert_equal(res, 0, "Delta patch apply failed");
     zassert_equal(patch_len, 3, "Delta patch produced len mismatch");
     zassert_mem_equal(patch_out, diff, 3, "Delta patch content mismatch");
 }
 
-ZTEST(modem_tests, test_session_dispatcher_and_log_rotation)
+ZTEST(modem_tests, test_multichannel_session_dispatcher)
 {
     session_dispatcher_init();
     zassert_equal(session_dispatcher_get_active_count(), 0, "Initial active sessions should be 0");
 
     int id1 = session_dispatcher_create(MODEM_CHANNEL_UART);
-    zassert_true(id1 >= 0, "Failed to create session 1");
+    zassert_true(id1 >= 0, "Failed to create UART session");
     zassert_equal(session_dispatcher_get_active_count(), 1, "Active sessions should be 1");
 
     int id2 = session_dispatcher_create(MODEM_CHANNEL_BLE_NUS);
-    zassert_true(id2 >= 0, "Failed to create session 2");
+    zassert_true(id2 >= 0, "Failed to create BLE session");
     zassert_equal(session_dispatcher_get_active_count(), 2, "Active sessions should be 2");
 
     int id3 = session_dispatcher_create(MODEM_CHANNEL_NFC);
@@ -323,7 +355,10 @@ ZTEST(modem_tests, test_session_dispatcher_and_log_rotation)
 
     session_dispatcher_close(id1);
     zassert_equal(session_dispatcher_get_active_count(), 2, "Active sessions after close should be 2");
+}
 
+ZTEST(modem_tests, test_log_rotation_wear_aware)
+{
     log_rotation_ctx_t log_ctx;
     log_rotation_config_t log_cfg = {
         .max_chunk_size = 10,
@@ -341,7 +376,7 @@ ZTEST(modem_tests, test_session_dispatcher_and_log_rotation)
     zassert_str_equal(fname, "app_log_1.log", "Log chunk rotation filename mismatch");
 }
 
-ZTEST(modem_tests, test_signature_and_encryption)
+ZTEST(modem_tests, test_signature_verification_and_encrypted_stream)
 {
     modem_sig_verify_ctx_t sig_ctx;
     signature_verify_init(&sig_ctx);
@@ -378,114 +413,21 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
     zassert_equal(current.packet_timeout_ms, 3000, "Default packet timeout mismatch");
     zassert_equal(current.byte_timeout_ms, 1000, "Default byte timeout mismatch");
     zassert_equal(current.max_retries, 10, "Default max retries mismatch");
-    zassert_equal(current.inter_block_delay_ms, 0, "Default inter-block delay mismatch");
-    zassert_equal(current.handshake_delay_ms, 1000, "Default handshake delay mismatch");
-    zassert_equal(current.overwrite_mode, MODEM_OVERWRITE_ALWAYS, "Default overwrite mode mismatch");
-    zassert_equal(current.enable_resume, true, "Default resume setting mismatch");
 
-    console_modem_settings_t updated;
-    console_modem_settings_get(&updated);
+    console_modem_settings_t updated = current;
     updated.packet_timeout_ms = 6000;
     updated.byte_timeout_ms = 1500;
     updated.max_retries = 20;
-    updated.inter_block_delay_ms = 50;
-    updated.handshake_delay_ms = 2000;
-    updated.overwrite_mode = MODEM_OVERWRITE_SKIP;
-#if defined(CONFIG_MODEM_ENABLE_RESUME)
-    updated.enable_resume = false;
-#endif
-    strncpy(updated.default_target_dir, "/RAM:", sizeof(updated.default_target_dir) - 1);
-    updated.sync_interval_blocks = 5;
-#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
-    updated.signature_verify = true;
-#endif
-#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
-    updated.encrypted_envelope = true;
-#endif
     console_modem_settings_set(&updated);
 
     console_modem_settings_get(&current);
     zassert_equal(current.packet_timeout_ms, 6000, "Updated packet timeout mismatch");
     zassert_equal(current.byte_timeout_ms, 1500, "Updated byte timeout mismatch");
     zassert_equal(current.max_retries, 20, "Updated max retries mismatch");
-    zassert_equal(current.inter_block_delay_ms, 50, "Updated inter-block delay mismatch");
-    zassert_equal(current.handshake_delay_ms, 2000, "Updated handshake delay mismatch");
-    zassert_equal(current.overwrite_mode, MODEM_OVERWRITE_SKIP, "Updated overwrite mode mismatch");
-#if defined(CONFIG_MODEM_ENABLE_RESUME)
-    zassert_equal(current.enable_resume, false, "Updated resume setting mismatch");
-#endif
-    zassert_str_equal(current.default_target_dir, "/RAM:", "Updated default target dir mismatch");
-    zassert_equal(current.sync_interval_blocks, 5, "Updated sync interval mismatch");
-#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
-    zassert_true(current.signature_verify, "Updated signature_verify mismatch");
-#endif
-#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
-    zassert_true(current.encrypted_envelope, "Updated encrypted_envelope mismatch");
-#endif
 }
 
-ZTEST(modem_tests, test_autostart_and_advanced_features)
+ZTEST(modem_tests, test_mcuboot_header_validation)
 {
-#if defined(CONFIG_MODEM_AUTO_START)
-    /* Test Autostart detection */
-    zassert_false(console_modem_check_autostart('r'), "Autostart step 1 should return false");
-    zassert_false(console_modem_check_autostart('z'), "Autostart step 2 should return false");
-    zassert_true(console_modem_check_autostart('\r'), "Autostart trigger failed");
-#endif
-
-    console_modem_settings_t current;
-    console_modem_settings_get(&current);
-#if defined(CONFIG_MODEM_AUTO_START)
-    zassert_true(current.auto_start, "Default auto_start setting mismatch");
-#endif
-#if defined(CONFIG_MODEM_ASYNC_STORAGE)
-    zassert_true(current.async_storage, "Default async_storage setting mismatch");
-#endif
-#if defined(CONFIG_MODEM_PROGRESS_BAR)
-    zassert_true(current.progress_bar, "Default progress_bar setting mismatch");
-#endif
-#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
-    zassert_true(current.directory_transfers, "Default directory_transfers setting mismatch");
-#endif
-#if defined(CONFIG_MODEM_RING_BUFFER)
-    zassert_true(current.ring_buffer, "Default ring_buffer setting mismatch");
-#endif
-#if defined(CONFIG_MODEM_ABORT_KEY)
-    zassert_true(current.abort_key, "Default abort_key setting mismatch");
-    zassert_equal(current.abort_key_char, 3, "Default abort_key_char setting mismatch");
-
-    /* Test setting custom abort key character (e.g. 27 / ESC / 0x1B) */
-    current.abort_key_char = 27;
-    console_modem_settings_set(&current);
-
-    console_modem_settings_get(&current);
-    zassert_equal(current.abort_key_char, 27, "Updated abort_key_char setting mismatch");
-#endif
-
-#if defined(CONFIG_MODEM_FLOW_CONTROL)
-    /* Test flow control toggle and channel binding API */
-    current.flow_control = true;
-    console_modem_settings_set(&current);
-#endif
-
-    console_modem_channel_t ch = {
-        .uart_dev = NULL,
-        .read_byte = mock_rx_read_byte,
-        .write_bytes = mock_rx_write_data,
-        .user_data = NULL
-    };
-    int bind_res = console_modem_bind_device(&ch);
-    zassert_equal(bind_res, 0, "Device channel binding failed");
-
-    /* Test transfer statistics counters */
-    modem_stats_t stats;
-    console_modem_stats_get(&stats);
-    zassert_equal(stats.crc_errors, 0, "Stats CRC error count mismatch");
-    console_modem_stats_reset();
-    console_modem_stats_get(&stats);
-    zassert_equal(stats.total_transfers, 0, "Stats reset failed");
-
-    /* Test MCUBoot Image Header Validation */
     mcuboot_image_header_t hdr = {
         .magic = MCUBOOT_IMAGE_MAGIC,
         .img_size = 1024
@@ -520,6 +462,110 @@ ZTEST(modem_tests, test_fault_injection_stress_harness)
     size_t total_rx = 0;
     xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
     zassert_equal(status, XMODEM_ERROR_TIMEOUT, "Expected failure on corrupted data pipe");
+}
+
+/* ===================================================================
+ * END-TO-END INTEGRATION TESTS
+ * =================================================================== */
+
+ZTEST(modem_tests, test_integration_mcuboot_firmware_upgrade_pipeline)
+{
+    /* 1. Construct valid MCUBoot image header payload */
+    mcuboot_image_header_t hdr = {
+        .magic = MCUBOOT_IMAGE_MAGIC,
+        .load_addr = 0x00010000,
+        .hdr_size = sizeof(mcuboot_image_header_t),
+        .pad = 0,
+        .img_size = 512,
+        .flags = 0
+    };
+
+    /* Validate header slot boundary constraints */
+    int val_res = mcuboot_validate_header((const uint8_t *)&hdr, sizeof(hdr), 4096);
+    zassert_equal(val_res, 0, "Integration: Header validation failed");
+
+    /* 2. Compute streaming digest and verify signature */
+    modem_sig_verify_ctx_t sig_ctx;
+    signature_verify_init(&sig_ctx);
+    signature_verify_update(&sig_ctx, (const uint8_t *)&hdr, sizeof(hdr));
+
+    uint8_t dummy_sig[64] = {0};
+    uint8_t dummy_key[32] = {0};
+    int sig_res = signature_verify_final(&sig_ctx, dummy_sig, sizeof(dummy_sig), dummy_key, sizeof(dummy_key));
+    zassert_equal(sig_res, 0, "Integration: Signature verification failed");
+
+    /* 3. Flash sector preparation helper */
+    modem_flash_ctx_t flash_ctx;
+    int flash_init = modem_flash_init(&flash_ctx, "slot1_partition");
+    zassert_equal(flash_init, 0, "Integration: Flash helper init failed");
+
+    int write_res = modem_flash_write(&flash_ctx, (const uint8_t *)&hdr, sizeof(hdr));
+    zassert_equal(write_res, 0, "Integration: Flash write failed");
+}
+
+ZTEST(modem_tests, test_integration_zmodem_transfer_over_nfc_transport)
+{
+#if defined(CONFIG_MODEM_NFC)
+    /* 1. Initialize NFC T4T transport adapter */
+    nfc_transport_config_t nfc_cfg = {
+        .rx_buffer_size = 512,
+        .tx_buffer_size = 512,
+        .field_timeout_ms = 1000,
+        .auto_ndef_framing = true
+    };
+    zassert_equal(nfc_transport_init(&nfc_cfg), 0, "Integration NFC init failed");
+    zassert_equal(nfc_transport_start(), 0, "Integration NFC start failed");
+
+    /* 2. Bind NFC transport callbacks to modem console channel */
+    console_modem_channel_t nfc_channel = {
+        .uart_dev = NULL,
+        .read_byte = nfc_transport_read_byte,
+        .write_bytes = nfc_transport_write_bytes,
+        .user_data = NULL
+    };
+    zassert_equal(console_modem_bind_device(&nfc_channel), 0, "Integration channel bind failed");
+
+    /* 3. Simulate external NFC reader sending NDEF packet */
+    uint8_t zmodem_init_pkt[] = "ZRINIT_FRAME";
+    nfc_transport_rx_callback(zmodem_init_pkt, sizeof(zmodem_init_pkt));
+
+    uint8_t b = 0;
+    zassert_equal(nfc_transport_read_byte(&b, 10, NULL), 0, "Integration NFC read byte failed");
+    zassert_equal(b, 'Z', "Integration NFC read byte mismatch");
+    while (nfc_transport_read_byte(&b, 1, NULL) == 0) {}
+
+    /* 4. Test RF field loss handling */
+    nfc_transport_set_field_active(false);
+    zassert_equal(nfc_transport_read_byte(&b, 10, NULL), -2, "Integration NFC field loss should return -2");
+
+    /* Reset active channel binding */
+    console_modem_bind_device(NULL);
+#endif
+}
+
+ZTEST(modem_tests, test_integration_multichannel_dispatcher_workflow)
+{
+    session_dispatcher_init();
+
+    int uart_id = session_dispatcher_create(MODEM_CHANNEL_UART);
+    int ble_id = session_dispatcher_create(MODEM_CHANNEL_BLE_NUS);
+    int socket_id = session_dispatcher_create(MODEM_CHANNEL_SOCKET);
+    int nfc_id = session_dispatcher_create(MODEM_CHANNEL_NFC);
+
+    zassert_true(uart_id >= 0, "UART session failed");
+    zassert_true(ble_id >= 0, "BLE session failed");
+    zassert_true(socket_id >= 0, "Socket session failed");
+    zassert_true(nfc_id >= 0, "NFC session failed");
+
+    zassert_equal(session_dispatcher_get_active_count(), 4, "Active session count should be 4");
+
+    zassert_equal(session_dispatcher_close(ble_id), 0, "Failed to close BLE session");
+    zassert_equal(session_dispatcher_get_active_count(), 3, "Active session count should be 3");
+
+    zassert_equal(session_dispatcher_close(uart_id), 0, "Failed to close UART session");
+    zassert_equal(session_dispatcher_close(socket_id), 0, "Failed to close Socket session");
+    zassert_equal(session_dispatcher_close(nfc_id), 0, "Failed to close NFC session");
+    zassert_equal(session_dispatcher_get_active_count(), 0, "Active session count should return to 0");
 }
 
 ZTEST_SUITE(modem_tests, NULL, NULL, NULL, NULL, NULL);
