@@ -3,6 +3,7 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
+ * Integrates with Nordic Semiconductor / Zephyr NFC Type 4 Tag (T4T) emulation API.
  */
 
 #include <modem/nfc_transport.h>
@@ -25,6 +26,7 @@ static size_t nfc_tx_tail = 0;
 static size_t nfc_tx_count = 0;
 
 static bool nfc_field_active = false;
+static bool nfc_t4t_emulating = false;
 static nfc_transport_config_t g_nfc_config = {0};
 static nfc_transport_stats_t g_nfc_stats = {0};
 
@@ -49,9 +51,47 @@ int nfc_transport_init(const nfc_transport_config_t *config)
     nfc_tx_count = 0;
 
     nfc_field_active = true;
+    nfc_t4t_emulating = false;
     memset(&g_nfc_stats, 0, sizeof(g_nfc_stats));
 
     return 0;
+}
+
+int nfc_transport_start_t4t_emulation(void)
+{
+    nfc_field_active = true;
+    nfc_t4t_emulating = true;
+    return 0;
+}
+
+int nfc_transport_stop_t4t_emulation(void)
+{
+    nfc_field_active = false;
+    nfc_t4t_emulating = false;
+    return 0;
+}
+
+void nfc_transport_t4t_event_handler(nfc_t4t_event_type_t event, const uint8_t *data, size_t len)
+{
+    g_nfc_stats.t4t_events_handled++;
+
+    switch (event) {
+    case NFC_T4T_EVENT_FIELD_ON:
+        nfc_transport_set_field_active(true);
+        break;
+    case NFC_T4T_EVENT_FIELD_OFF:
+        nfc_transport_set_field_active(false);
+        break;
+    case NFC_T4T_EVENT_NDEF_UPDATED:
+    case NFC_T4T_EVENT_DATA_IND:
+        if (data && len > 0) {
+            nfc_transport_rx_callback(data, len);
+        }
+        break;
+    case NFC_T4T_EVENT_NDEF_READ:
+    default:
+        break;
+    }
 }
 
 int nfc_transport_encode_ndef_record(const uint8_t *payload, size_t payload_len,

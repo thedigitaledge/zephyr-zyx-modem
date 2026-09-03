@@ -3,8 +3,8 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Header file for NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
- * Provides ring-buffered data streams, NDEF Type-4 record encapsulation, field loss
- * detection timeouts, and transmission/reception callbacks.
+ * Provides ring-buffered data streams, NDEF Type-4 Tag (T4T) emulation API integration,
+ * field loss detection timeouts, and transmission/reception callbacks.
  */
 
 #ifndef MODEM_NFC_TRANSPORT_H_
@@ -21,15 +21,27 @@ extern "C" {
 #define NFC_MAX_NDEF_PAYLOAD_SIZE 512
 
 /**
+ * @brief Nordic / Zephyr NFC T4T Emulation Event Types
+ */
+typedef enum {
+    NFC_T4T_EVENT_FIELD_ON = 0,   /**< RF field detected by NFC controller */
+    NFC_T4T_EVENT_FIELD_OFF,      /**< RF field loss detected */
+    NFC_T4T_EVENT_NDEF_READ,      /**< NDEF message read by external poller */
+    NFC_T4T_EVENT_NDEF_UPDATED,   /**< New NDEF record written by external poller */
+    NFC_T4T_EVENT_DATA_IND        /**< Direct ISODEP raw data indication */
+} nfc_t4t_event_type_t;
+
+/**
  * @brief NFC Transport Diagnostic Statistics
  */
 typedef struct {
-    size_t rx_bytes;       /**< Total received byte count */
-    size_t tx_bytes;       /**< Total transmitted byte count */
-    uint32_t ndef_records_rx; /**< Total NDEF records decoded */
-    uint32_t ndef_records_tx; /**< Total NDEF records encoded */
-    uint32_t field_loss_count; /**< Total RF field loss events detected */
-    uint32_t overflow_count;   /**< RX buffer overflow drop count */
+    size_t rx_bytes;            /**< Total received byte count */
+    size_t tx_bytes;            /**< Total transmitted byte count */
+    uint32_t ndef_records_rx;   /**< Total NDEF records decoded */
+    uint32_t ndef_records_tx;   /**< Total NDEF records encoded */
+    uint32_t field_loss_count;   /**< Total RF field loss events detected */
+    uint32_t overflow_count;     /**< RX buffer overflow drop count */
+    uint32_t t4t_events_handled; /**< Total T4T event callbacks processed */
 } nfc_transport_stats_t;
 
 /**
@@ -50,6 +62,29 @@ typedef struct {
  * @return 0 on success, negative error code on failure.
  */
 int nfc_transport_init(const nfc_transport_config_t *config);
+
+/**
+ * @brief Start NFC Type 4 Tag (T4T) emulation mode.
+ * @return 0 on success, negative error code on failure.
+ */
+int nfc_transport_start_t4t_emulation(void);
+
+/**
+ * @brief Stop NFC Type 4 Tag (T4T) emulation mode.
+ * @return 0 on success, negative error code on failure.
+ */
+int nfc_transport_stop_t4t_emulation(void);
+
+/**
+ * @brief Nordic / Zephyr NFC T4T Event Handler Callback.
+ *
+ * Processes field status changes, NDEF updates, and ISODEP data indications.
+ *
+ * @param event T4T event type.
+ * @param data Data buffer associated with event (or NULL).
+ * @param len Length of data buffer.
+ */
+void nfc_transport_t4t_event_handler(nfc_t4t_event_type_t event, const uint8_t *data, size_t len);
 
 /**
  * @brief Read byte from NFC NDEF RX stream with timeout polling.
