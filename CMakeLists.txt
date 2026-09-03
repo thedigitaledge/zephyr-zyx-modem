@@ -17,6 +17,10 @@ zephyr_library_sources_ifdef(CONFIG_MODEM_YMODEM src/ymodem.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_ZMODEM src/zmodem.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_CONSOLE src/zephyr_console_modem.c)
 
+zephyr_library_sources_ifdef(CONFIG_MODEM_STATS src/modem_stats.c)
+zephyr_library_sources_ifdef(CONFIG_MODEM_AUTO_START src/modem_autostart.c)
+zephyr_library_sources_ifdef(CONFIG_MODEM_USB_CDC_ACM src/modem_usb_cdc_acm.c)
+
 zephyr_library_sources_ifdef(CONFIG_MODEM_BLE_NUS src/ble_nus_transport.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_NET_SOCKET src/net_socket_transport.c)
 zephyr_library_sources_ifdef(CONFIG_MODEM_DECOMPRESS src/stream_decompress.c)

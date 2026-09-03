@@ -19,6 +19,9 @@ target_sources(app PRIVATE
     ../src/ymodem.c
     ../src/zmodem.c
     ../src/zephyr_console_modem.c
+    ../src/modem_stats.c
+    ../src/modem_autostart.c
+    ../src/modem_usb_cdc_acm.c
     ../src/mcuboot_validate.c
     ../src/modem_flash_helper.c
     ../src/ble_nus_transport.c

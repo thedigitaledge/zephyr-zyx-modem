@@ -144,27 +144,7 @@ static console_modem_settings_t g_modem_settings = {
 #endif
 };
 
-int console_modem_setup_usb_cdc_acm(void)
-{
-    return 0;
-}
-
 static console_modem_channel_t *g_active_channel = NULL;
-
-/* Transfer Statistics Counters */
-static modem_stats_t g_modem_stats = {0};
-
-void console_modem_stats_get(modem_stats_t *stats)
-{
-    if (stats) {
-        *stats = g_modem_stats;
-    }
-}
-
-void console_modem_stats_reset(void)
-{
-    memset(&g_modem_stats, 0, sizeof(g_modem_stats));
-}
 
 int console_modem_bind_device(console_modem_channel_t *channel)
 {
@@ -227,30 +207,6 @@ static void async_write_handler(struct k_work *work)
     }
 }
 #endif
-
-/**
- * Auto-Start detection handler.
- */
-static uint8_t g_autostart_buf[8] = {0};
-static size_t g_autostart_idx = 0;
-
-bool console_modem_check_autostart(uint8_t byte)
-{
-#if defined(CONFIG_MODEM_AUTO_START)
-    if (!g_modem_settings.auto_start) return false;
-    g_autostart_buf[g_autostart_idx % 8] = byte;
-    g_autostart_idx++;
-    if (g_autostart_idx >= 3) {
-        size_t idx = (g_autostart_idx - 3) % 8;
-        if (g_autostart_buf[idx] == 'r' &&
-            g_autostart_buf[(idx + 1) % 8] == 'z' &&
-            g_autostart_buf[(idx + 2) % 8] == '\r') {
-            return true;
-        }
-    }
-#endif
-    return false;
-}
 
 /**
  * Console byte read helper with Abort Key monitoring and timeout polling.
@@ -842,7 +798,11 @@ static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
     }
 #endif
 
-    g_modem_stats.total_transfers++;
+#if defined(CONFIG_MODEM_STATS)
+    modem_stats_t stats;
+    console_modem_stats_get(&stats);
+    stats.total_transfers++;
+#endif
 
     int res = 0;
     if (proto && (strcmp(proto, "xmodem") == 0 || strcmp(proto, "x") == 0)) {
@@ -853,12 +813,6 @@ static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
         res = console_modem_rx_zmodem(out_path);
     } else {
         res = console_modem_rx_zmodem(argv[1]);
-    }
-
-    if (res == 0) {
-        g_modem_stats.successful_transfers++;
-    } else {
-        g_modem_stats.failed_transfers++;
     }
 
     return res;
@@ -895,6 +849,7 @@ static int cmd_modem_tx(const struct shell *sh, size_t argc, char **argv)
 }
 #endif /* CONFIG_FILE_SYSTEM */
 
+#if defined(CONFIG_MODEM_STATS)
 static int cmd_modem_stats(const struct shell *sh, size_t argc, char **argv)
 {
     if (argc > 1 && strcmp(argv[1], "reset") == 0) {
@@ -903,16 +858,20 @@ static int cmd_modem_stats(const struct shell *sh, size_t argc, char **argv)
         return 0;
     }
 
+    modem_stats_t stats;
+    console_modem_stats_get(&stats);
+
     shell_print(sh, "Modem Transfer Statistics:");
-    shell_print(sh, "  Total Transfers:       %u", g_modem_stats.total_transfers);
-    shell_print(sh, "  Successful Transfers:  %u", g_modem_stats.successful_transfers);
-    shell_print(sh, "  Failed Transfers:      %u", g_modem_stats.failed_transfers);
-    shell_print(sh, "  CRC Errors:            %u", g_modem_stats.crc_errors);
-    shell_print(sh, "  Packet Retries:        %u", g_modem_stats.retries);
-    shell_print(sh, "  Total Bytes Received:  %zu", g_modem_stats.total_bytes_rx);
-    shell_print(sh, "  Total Bytes Sent:      %zu", g_modem_stats.total_bytes_tx);
+    shell_print(sh, "  Total Transfers:       %u", stats.total_transfers);
+    shell_print(sh, "  Successful Transfers:  %u", stats.successful_transfers);
+    shell_print(sh, "  Failed Transfers:      %u", stats.failed_transfers);
+    shell_print(sh, "  CRC Errors:            %u", stats.crc_errors);
+    shell_print(sh, "  Packet Retries:        %u", stats.retries);
+    shell_print(sh, "  Total Bytes Received:  %zu", stats.total_bytes_rx);
+    shell_print(sh, "  Total Bytes Sent:      %zu", stats.total_bytes_tx);
     return 0;
 }
+#endif
 
 static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
 {
@@ -1142,7 +1101,9 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_modem,
     SHELL_CMD_ARG(update, NULL, "Stream MCUBoot update: modem update [x|y|z] <file>", cmd_modem_rx, 1, 2),
 #endif
     SHELL_CMD_ARG(config, NULL, "Configure modem settings: modem config [param val]", cmd_modem_config, 1, 2),
+#if defined(CONFIG_MODEM_STATS)
     SHELL_CMD_ARG(stats, NULL, "Display transfer stats: modem stats [reset]", cmd_modem_stats, 1, 1),
+#endif
     SHELL_SUBCMD_SET_END
 );
 

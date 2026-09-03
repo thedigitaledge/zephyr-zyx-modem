@@ -10,6 +10,8 @@
 #ifndef MODEM_ZEPHYR_CONSOLE_MODEM_H_
 #define MODEM_ZEPHYR_CONSOLE_MODEM_H_
 
+#include <zephyr/kernel.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -106,7 +108,11 @@ typedef struct {
  * @brief Initialize USB CDC-ACM virtual serial port device channel.
  * @return 0 on success, negative error code on failure.
  */
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
 int console_modem_setup_usb_cdc_acm(void);
+#else
+static inline int console_modem_setup_usb_cdc_acm(void) { return -ENOTSUP; }
+#endif
 
 /**
  * @brief Stream MCUBoot image update to secondary partition slot.
@@ -133,12 +139,13 @@ typedef struct {
  * @brief Get cumulative modem transfer statistics counters.
  * @param stats Output pointer for stats structure.
  */
+#if defined(CONFIG_MODEM_STATS)
 void console_modem_stats_get(modem_stats_t *stats);
-
-/**
- * @brief Reset cumulative modem transfer statistics counters.
- */
 void console_modem_stats_reset(void);
+#else
+static inline void console_modem_stats_get(modem_stats_t *stats) { if (stats) { memset(stats, 0, sizeof(*stats)); } }
+static inline void console_modem_stats_reset(void) {}
+#endif
 
 /**
  * @brief Channel device binding context for multi-UART / multi-transport instances.
@@ -190,7 +197,12 @@ int console_modem_tx_zmodem(const char *input_filename);
 
 /** Advanced Feature Functions */
 int console_modem_tx_directory(const char *dir_path, int protocol);
+
+#if defined(CONFIG_MODEM_AUTO_START)
 bool console_modem_check_autostart(uint8_t byte);
+#else
+static inline bool console_modem_check_autostart(uint8_t byte) { (void)byte; return false; }
+#endif
 
 #ifdef __cplusplus
 }
