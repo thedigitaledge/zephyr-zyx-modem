@@ -45,7 +45,7 @@ uint8_t modem_checksum8(const uint8_t *buf, size_t len);
  */
 static inline uint16_t modem_crc16(const uint8_t *buf, size_t len)
 {
-    return crc16_ccitt(0xFFFF, buf, len);
+    return crc16_ccitt(0x0000, buf, len);
 }
 
 /**

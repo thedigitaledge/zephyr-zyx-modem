@@ -90,7 +90,7 @@ ZTEST(modem_tests, test_crc_service)
     zassert_equal(cksum, 0xDD, "Checksum8 failed");
 
     uint16_t crc16 = modem_crc16(data, 9);
-    zassert_equal(crc16, 0x29B1, "CRC16 CCITT failed");
+    zassert_equal(crc16, 0x31C3, "CRC16 CCITT failed");
 
     uint32_t crc32 = modem_crc32(data, 9);
     zassert_equal(crc32, 0xCBF43926U, "CRC32 IEEE failed");
