@@ -192,6 +192,9 @@ ZTEST(modem_tests, test_immediate_user_cancellation)
 
 ZTEST(modem_tests, test_ble_nus_and_socket_transports)
 {
+    uint8_t b = 0;
+
+#if defined(CONFIG_MODEM_BLE_NUS)
     ble_nus_transport_config_t nus_cfg = { .rx_ring_buffer_size = 512, .conn_timeout_ms = 1000 };
     int nus_init = ble_nus_transport_init(&nus_cfg);
     zassert_equal(nus_init, 0, "BLE NUS transport init failed");
@@ -200,15 +203,18 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     uint8_t sample_rx[] = { 'A', 'B', 'C' };
     ble_nus_transport_rx_callback(sample_rx, 3);
 
-    uint8_t b = 0;
     zassert_equal(ble_nus_transport_read_byte(&b, 10, NULL), 0, "BLE NUS read byte failed");
     zassert_equal(b, 'A', "BLE NUS read byte mismatch");
+#endif
 
+#if defined(CONFIG_MODEM_NET_SOCKET)
     net_socket_transport_config_t sock_cfg = { .socket_fd = 3, .read_timeout_ms = 1000 };
     int sock_init = net_socket_transport_init(&sock_cfg);
     zassert_equal(sock_init, 0, "Network socket transport init failed");
     zassert_equal(net_socket_transport_close(NULL), 0, "Socket close failed");
+#endif
 
+#if defined(CONFIG_MODEM_NFC)
     nfc_transport_config_t nfc_cfg = {
         .rx_buffer_size = 256,
         .tx_buffer_size = 256,
@@ -260,6 +266,7 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     nfc_transport_get_stats(&nfc_stats);
     zassert_true(nfc_stats.field_loss_count > 0, "Field loss count stat should be incremented");
     zassert_true(nfc_stats.t4t_events_handled > 0, "T4T events handled stat should be incremented");
+#endif
 }
 
 ZTEST(modem_tests, test_stream_decompress_and_delta_update)
