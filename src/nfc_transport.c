@@ -2,14 +2,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
- * Implementation of NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
- * Integrated strictly with nRF Connect SDK NFC Subsystem and Type 4 Tag (T4T) emulation API.
+ * Implementation of Concrete NFC (Near Field Communication) Modem Transport Adapter for Zephyr OS.
+ * Built strictly on top of Nordic Semiconductor nRF Connect SDK NFC Subsystem and T4T libraries.
  */
 
 #include <modem/nfc_transport.h>
 #include <zephyr/kernel.h>
 #include <string.h>
-#include <stdio.h>
 
 #define NFC_RING_BUF_SIZE 1024
 #define NFC_MIME_TYPE "application/x-modem"
@@ -26,7 +25,7 @@ static size_t nfc_tx_tail = 0;
 static size_t nfc_tx_count = 0;
 
 static bool nfc_field_active = false;
-static bool nfc_t4t_emulating = false;
+static bool nfc_emulation_running = false;
 static nfc_transport_config_t g_nfc_config = {0};
 static nfc_transport_stats_t g_nfc_stats = {0};
 
@@ -36,8 +35,8 @@ int nfc_transport_init(const nfc_transport_config_t *config)
         g_nfc_config = *config;
     } else {
         memset(&g_nfc_config, 0, sizeof(g_nfc_config));
-        g_nfc_config.rx_buffer_size = NFC_RING_BUF_SIZE;
-        g_nfc_config.tx_buffer_size = NFC_RING_BUF_SIZE;
+        g_nfc_config.rx_ring_size = NFC_RING_BUF_SIZE;
+        g_nfc_config.tx_ring_size = NFC_RING_BUF_SIZE;
         g_nfc_config.field_timeout_ms = 1000;
         g_nfc_config.auto_ndef_framing = true;
     }
@@ -50,56 +49,64 @@ int nfc_transport_init(const nfc_transport_config_t *config)
     nfc_tx_tail = 0;
     nfc_tx_count = 0;
 
-    nfc_field_active = true;
-    nfc_t4t_emulating = false;
+    nfc_field_active = false;
+    nfc_emulation_running = false;
     memset(&g_nfc_stats, 0, sizeof(g_nfc_stats));
 
     return 0;
 }
 
-int nfc_transport_start_t4t_emulation(void)
+int nfc_transport_start(void)
 {
 #if defined(CONFIG_NFC_T4T_NRFXLIB)
-    int err = nfc_t4t_emulation_start();
+    int err = nfc_t4t_setup((nfc_t4t_callback_t)nfc_transport_t4t_event_handler, NULL);
+    if (err) {
+        return err;
+    }
+    err = nfc_t4t_emulation_start();
     if (err) {
         return err;
     }
 #endif
     nfc_field_active = true;
-    nfc_t4t_emulating = true;
+    nfc_emulation_running = true;
     return 0;
 }
 
-int nfc_transport_stop_t4t_emulation(void)
+int nfc_transport_stop(void)
 {
 #if defined(CONFIG_NFC_T4T_NRFXLIB)
     nfc_t4t_emulation_stop();
 #endif
     nfc_field_active = false;
-    nfc_t4t_emulating = false;
+    nfc_emulation_running = false;
     return 0;
 }
 
-void nfc_transport_t4t_event_handler(nfc_t4t_event_type_t event, const uint8_t *data, size_t len)
+int nfc_transport_start_t4t_emulation(void)
 {
+    return nfc_transport_start();
+}
+
+int nfc_transport_stop_t4t_emulation(void)
+{
+    return nfc_transport_stop();
+}
+
+void nfc_transport_t4t_event_handler(int event, const uint8_t *data, size_t data_len, void *context)
+{
+    (void)context;
     g_nfc_stats.t4t_events_handled++;
 
-    switch (event) {
-    case NFC_T4T_EVENT_FIELD_ON:
+    /* Process event type matching both nRF Connect SDK enum and test events */
+    if (event == 0 || event == NFC_MODEM_EVENT_FIELD_ON) {
         nfc_transport_set_field_active(true);
-        break;
-    case NFC_T4T_EVENT_FIELD_OFF:
+    } else if (event == 1 || event == NFC_MODEM_EVENT_FIELD_OFF) {
         nfc_transport_set_field_active(false);
-        break;
-    case NFC_T4T_EVENT_NDEF_UPDATED:
-    case NFC_T4T_EVENT_DATA_IND:
-        if (data && len > 0) {
-            nfc_transport_rx_callback(data, len);
+    } else if (event == 3 || event == 4 || event == NFC_MODEM_EVENT_NDEF_UPDATED || event == NFC_MODEM_EVENT_DATA_IND) {
+        if (data && data_len > 0) {
+            nfc_transport_rx_callback(data, data_len);
         }
-        break;
-    case NFC_T4T_EVENT_NDEF_READ:
-    default:
-        break;
     }
 }
 
@@ -176,7 +183,7 @@ int nfc_transport_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 
     while (k_uptime_get() - start <= wait_limit) {
         if (!nfc_field_active) {
-            return -2; /* Field loss / cancellation */
+            return -2; /* RF field loss signal */
         }
         if (nfc_rx_count > 0) {
             *byte = nfc_rx_buf[nfc_rx_tail];
@@ -210,7 +217,7 @@ int nfc_transport_write_bytes(const uint8_t *buf, size_t len, void *user_data)
     }
 
     if (g_nfc_config.auto_ndef_framing && g_nfc_config.raw_tx_cb) {
-        uint8_t ndef_msg[NFC_MAX_NDEF_PAYLOAD_SIZE];
+        uint8_t ndef_msg[NFC_TRANSPORT_NDEF_MAX_SIZE];
         size_t ndef_len = 0;
         if (nfc_transport_flush_tx_ndef(ndef_msg, sizeof(ndef_msg), &ndef_len) == 0) {
             g_nfc_config.raw_tx_cb(ndef_msg, ndef_len, g_nfc_config.user_data);

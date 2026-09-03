@@ -217,7 +217,8 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     };
     int nfc_init = nfc_transport_init(&nfc_cfg);
     zassert_equal(nfc_init, 0, "NFC transport init failed");
-    zassert_true(nfc_transport_is_active(), "NFC field should be active");
+    zassert_equal(nfc_transport_start(), 0, "NFC transport start failed");
+    zassert_true(nfc_transport_is_active(), "NFC field should be active after start");
 
     uint8_t nfc_sample[] = { 'N', 'F', 'C' };
     nfc_transport_rx_callback(nfc_sample, 3);
@@ -241,17 +242,17 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
 
     /* Test Nordic T4T Event Handler Integration */
     zassert_equal(nfc_transport_start_t4t_emulation(), 0, "T4T emulation start failed");
-    nfc_transport_t4t_event_handler(NFC_T4T_EVENT_FIELD_ON, NULL, 0);
+    nfc_transport_t4t_event_handler(NFC_MODEM_EVENT_FIELD_ON, NULL, 0, NULL);
     zassert_true(nfc_transport_is_active(), "Field should be active on FIELD_ON event");
 
     uint8_t t4t_payload[] = "T4T Event Payload";
-    nfc_transport_t4t_event_handler(NFC_T4T_EVENT_NDEF_UPDATED, t4t_payload, sizeof(t4t_payload));
+    nfc_transport_t4t_event_handler(NFC_MODEM_EVENT_NDEF_UPDATED, t4t_payload, sizeof(t4t_payload), NULL);
 
     uint8_t t4t_b = 0;
     zassert_equal(nfc_transport_read_byte(&t4t_b, 10, NULL), 0, "T4T event read byte failed");
     zassert_equal(t4t_b, 'T', "T4T event read byte mismatch");
 
-    nfc_transport_t4t_event_handler(NFC_T4T_EVENT_FIELD_OFF, NULL, 0);
+    nfc_transport_t4t_event_handler(NFC_MODEM_EVENT_FIELD_OFF, NULL, 0, NULL);
     zassert_false(nfc_transport_is_active(), "NFC field should be inactive after FIELD_OFF event");
     zassert_equal(nfc_transport_read_byte(&b, 10, NULL), -2, "NFC read byte on field loss should return -2");
 
