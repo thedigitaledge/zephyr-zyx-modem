@@ -181,12 +181,16 @@ typedef struct {
     char target_path[256];
 } console_modem_ctx_t;
 
+#if defined(CONFIG_MODEM_ABORT_KEY)
 static int g_can_count = 0;
+#endif
 
+#if defined(CONFIG_MODEM_RING_BUFFER)
 /* Ring buffer UART transport adapter */
 RING_BUF_DECLARE(g_uart_ring_buf, 512);
+#endif
 
-#if defined(CONFIG_FILE_SYSTEM)
+#if defined(CONFIG_FILE_SYSTEM) && defined(CONFIG_MODEM_ASYNC_STORAGE)
 /* Async storage work item structure */
 struct async_storage_work_t {
     struct k_work work_item;

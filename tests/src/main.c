@@ -230,6 +230,10 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     nfc_transport_rx_callback(nfc_sample, 3);
     zassert_equal(nfc_transport_read_byte(&b, 10, NULL), 0, "NFC read byte failed");
     zassert_equal(b, 'N', "NFC read byte mismatch");
+    zassert_equal(nfc_transport_read_byte(&b, 10, NULL), 0, "NFC read byte 2 failed");
+    zassert_equal(b, 'F', "NFC read byte 2 mismatch");
+    zassert_equal(nfc_transport_read_byte(&b, 10, NULL), 0, "NFC read byte 3 failed");
+    zassert_equal(b, 'C', "NFC read byte 3 mismatch");
 
     /* Test NDEF Record Encoding and Ring Buffer Flushing */
     uint8_t tx_payload[] = "NFC Data Payload";
@@ -245,6 +249,8 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     uint8_t decoded_byte = 0;
     zassert_equal(nfc_transport_read_byte(&decoded_byte, 10, NULL), 0, "NFC decoded read byte failed");
     zassert_equal(decoded_byte, 'N', "NFC decoded byte mismatch");
+    /* Drain remaining decoded payload bytes */
+    while (nfc_transport_read_byte(&b, 1, NULL) == 0) {}
 
     /* Test Nordic T4T Event Handler Integration */
     zassert_equal(nfc_transport_start_t4t_emulation(), 0, "T4T emulation start failed");
@@ -257,6 +263,8 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     uint8_t t4t_b = 0;
     zassert_equal(nfc_transport_read_byte(&t4t_b, 10, NULL), 0, "T4T event read byte failed");
     zassert_equal(t4t_b, 'T', "T4T event read byte mismatch");
+    /* Drain remaining T4T payload bytes */
+    while (nfc_transport_read_byte(&b, 1, NULL) == 0) {}
 
     nfc_transport_t4t_event_handler(NFC_MODEM_EVENT_FIELD_OFF, NULL, 0, NULL);
     zassert_false(nfc_transport_is_active(), "NFC field should be inactive after FIELD_OFF event");

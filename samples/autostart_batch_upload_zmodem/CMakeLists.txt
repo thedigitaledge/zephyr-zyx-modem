@@ -6,4 +6,4 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(autostart_batch_upload_zmodem)
 
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../../include ${CMAKE_CURRENT_LIST_DIR}/../../src)
-target_sources(app PRIVATE src/main.c ../../src/crc.c ../../src/zmodem.c)
+target_sources(app PRIVATE src/main.c)
