@@ -204,7 +204,7 @@ config MODEM_LOG_ROTATION
 config MODEM_NFC
 	bool "NFC Data Communications Transport Adapter (nRF Connect SDK / Zephyr NFC)"
 	default n
-	depends on HAS_HW_NRF_NFC || NFC_T4T_NRFXLIB || NFC_NDEF || NFC_T4T_APDU
+	depends on HAS_HW_NRF_NFC || NFC_T4T_NRFXLIB || NFC_NDEF || NFC_NDEF_MSG || NFC_NDEF_RECORD
 	help
 	  Enable Near Field Communication (NFC) NDEF serial modem transport adapter
 	  integrated with nRF Connect SDK / Zephyr NFC Subsystem and Type 4 Tag (T4T) emulation.

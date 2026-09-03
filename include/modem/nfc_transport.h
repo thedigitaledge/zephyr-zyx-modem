@@ -13,10 +13,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#if defined(CONFIG_NFC_T4T_NRFXLIB) || defined(CONFIG_NFC_NDEF) || defined(CONFIG_NFC_T4T_APDU)
+#if defined(CONFIG_NFC_T4T_NRFXLIB) || defined(CONFIG_NFC_NDEF) || defined(CONFIG_NFC_NDEF_MSG)
 #include <nfc/t4t/msgtag.h>
+#include <nfc/t4t/ndef_file.h>
 #include <nfc/ndef/msg.h>
 #include <nfc/ndef/record.h>
+#include <nfc/ndef/uri_msg.h>
 #endif
 
 #ifdef __cplusplus
