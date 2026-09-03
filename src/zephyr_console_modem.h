@@ -37,29 +37,69 @@ typedef struct {
     uint32_t inter_block_delay_ms; /**< Delay inserted between transmitted blocks */
     uint32_t handshake_delay_ms;   /**< Delay between handshake attempts */
     modem_overwrite_mode_t overwrite_mode; /**< File overwrite policy */
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
     bool enable_resume;            /**< Enable ZMODEM auto-resume */
+#endif
     char default_target_dir[128];  /**< Default storage directory path */
     uint32_t sync_interval_blocks; /**< Interval in blocks between file syncs */
+#if defined(CONFIG_MODEM_AUTO_START)
     bool auto_start;               /**< Enable ZMODEM auto-start detection */
+#endif
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
     bool async_storage;            /**< Offload file writes to Zephyr workqueue */
+#endif
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
     bool progress_bar;             /**< Render shell progress bar and throughput */
+#endif
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
     bool directory_transfers;      /**< Enable directory batch transfers */
+#endif
+#if defined(CONFIG_MODEM_RING_BUFFER)
     bool ring_buffer;              /**< Enable ring buffer UART transport adapter */
+#endif
+#if defined(CONFIG_MODEM_ABORT_KEY)
     bool abort_key;                /**< Enable terminal abort key monitoring */
     uint8_t abort_key_char;        /**< Configurable abort key ASCII byte value (default 0x03) */
+#endif
+#if defined(CONFIG_MODEM_FLOW_CONTROL)
     bool flow_control;             /**< RTS/CTS hardware and XON/XOFF software flow control */
+#endif
+#if defined(CONFIG_MODEM_FLASH_PARTITION)
     char flash_partition[32];      /**< Target raw flash area partition name (e.g. slot1) */
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_UPDATE)
     bool mcuboot_update;           /**< MCUBoot dual-bank image upgrade manager */
+#endif
+#if defined(CONFIG_MODEM_NVS_CHECKPOINTS)
     bool nvs_checkpoints;          /**< NVS / Settings auto-resume checkpoints */
+#endif
+#if defined(CONFIG_MODEM_CRYPTO_STREAM)
     bool crypto_stream;            /**< In-flight payload streaming encryption */
+#endif
+#if defined(CONFIG_MODEM_UART_DMA)
     bool uart_dma;                 /**< High-speed zero-copy async UART DMA ring buffer adapter */
+#endif
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
     bool usb_cdc_acm;              /**< USB CDC-ACM virtual serial port adapter */
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
     bool mcuboot_validate;         /**< MCUBoot image magic header and slot boundary validation */
+#endif
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
     bool signature_verify;         /**< Firmware signature verification */
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
     bool encrypted_envelope;       /**< Encrypted stream payload envelope */
+#endif
+#if defined(CONFIG_MODEM_SESSION_DISPATCHER)
     bool session_dispatcher;       /**< Multi-session transport dispatcher */
+#endif
+#if defined(CONFIG_MODEM_LOG_ROTATION)
     bool log_rotation;             /**< Wear-aware log rotation */
+#endif
+#if defined(CONFIG_MODEM_NFC)
     bool nfc_transport;            /**< NFC data communications transport */
+#endif
 } console_modem_settings_t;
 
 /**

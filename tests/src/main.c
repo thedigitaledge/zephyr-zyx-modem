@@ -372,11 +372,17 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
     updated.inter_block_delay_ms = 50;
     updated.handshake_delay_ms = 2000;
     updated.overwrite_mode = MODEM_OVERWRITE_SKIP;
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
     updated.enable_resume = false;
+#endif
     strncpy(updated.default_target_dir, "/RAM:", sizeof(updated.default_target_dir) - 1);
     updated.sync_interval_blocks = 5;
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
     updated.signature_verify = true;
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
     updated.encrypted_envelope = true;
+#endif
     console_modem_settings_set(&updated);
 
     console_modem_settings_get(&current);
@@ -386,27 +392,46 @@ ZTEST(modem_tests, test_console_modem_settings_and_options)
     zassert_equal(current.inter_block_delay_ms, 50, "Updated inter-block delay mismatch");
     zassert_equal(current.handshake_delay_ms, 2000, "Updated handshake delay mismatch");
     zassert_equal(current.overwrite_mode, MODEM_OVERWRITE_SKIP, "Updated overwrite mode mismatch");
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
     zassert_equal(current.enable_resume, false, "Updated resume setting mismatch");
+#endif
     zassert_str_equal(current.default_target_dir, "/RAM:", "Updated default target dir mismatch");
     zassert_equal(current.sync_interval_blocks, 5, "Updated sync interval mismatch");
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
     zassert_true(current.signature_verify, "Updated signature_verify mismatch");
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
     zassert_true(current.encrypted_envelope, "Updated encrypted_envelope mismatch");
+#endif
 }
 
 ZTEST(modem_tests, test_autostart_and_advanced_features)
 {
+#if defined(CONFIG_MODEM_AUTO_START)
     /* Test Autostart detection */
     zassert_false(console_modem_check_autostart('r'), "Autostart step 1 should return false");
     zassert_false(console_modem_check_autostart('z'), "Autostart step 2 should return false");
     zassert_true(console_modem_check_autostart('\r'), "Autostart trigger failed");
+#endif
 
     console_modem_settings_t current;
     console_modem_settings_get(&current);
+#if defined(CONFIG_MODEM_AUTO_START)
     zassert_true(current.auto_start, "Default auto_start setting mismatch");
+#endif
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
     zassert_true(current.async_storage, "Default async_storage setting mismatch");
+#endif
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
     zassert_true(current.progress_bar, "Default progress_bar setting mismatch");
+#endif
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
     zassert_true(current.directory_transfers, "Default directory_transfers setting mismatch");
+#endif
+#if defined(CONFIG_MODEM_RING_BUFFER)
     zassert_true(current.ring_buffer, "Default ring_buffer setting mismatch");
+#endif
+#if defined(CONFIG_MODEM_ABORT_KEY)
     zassert_true(current.abort_key, "Default abort_key setting mismatch");
     zassert_equal(current.abort_key_char, 3, "Default abort_key_char setting mismatch");
 
@@ -416,10 +441,13 @@ ZTEST(modem_tests, test_autostart_and_advanced_features)
 
     console_modem_settings_get(&current);
     zassert_equal(current.abort_key_char, 27, "Updated abort_key_char setting mismatch");
+#endif
 
+#if defined(CONFIG_MODEM_FLOW_CONTROL)
     /* Test flow control toggle and channel binding API */
     current.flow_control = true;
     console_modem_settings_set(&current);
+#endif
 
     console_modem_channel_t ch = {
         .uart_dev = NULL,

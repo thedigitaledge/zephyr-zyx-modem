@@ -79,29 +79,69 @@ static console_modem_settings_t g_modem_settings = {
     .inter_block_delay_ms = CONFIG_MODEM_INTER_BLOCK_DELAY_MS,
     .handshake_delay_ms = CONFIG_MODEM_HANDSHAKE_DELAY_MS,
     .overwrite_mode = (modem_overwrite_mode_t)CONFIG_MODEM_FILE_OVERWRITE_MODE,
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
     .enable_resume = IS_ENABLED(CONFIG_MODEM_ENABLE_RESUME),
+#endif
     .default_target_dir = CONFIG_MODEM_DEFAULT_TARGET_DIR,
     .sync_interval_blocks = CONFIG_MODEM_SYNC_INTERVAL_BLOCKS,
+#if defined(CONFIG_MODEM_AUTO_START)
     .auto_start = IS_ENABLED(CONFIG_MODEM_AUTO_START),
+#endif
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
     .async_storage = IS_ENABLED(CONFIG_MODEM_ASYNC_STORAGE),
+#endif
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
     .progress_bar = IS_ENABLED(CONFIG_MODEM_PROGRESS_BAR),
+#endif
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
     .directory_transfers = IS_ENABLED(CONFIG_MODEM_DIRECTORY_TRANSFERS),
+#endif
+#if defined(CONFIG_MODEM_RING_BUFFER)
     .ring_buffer = IS_ENABLED(CONFIG_MODEM_RING_BUFFER),
+#endif
+#if defined(CONFIG_MODEM_ABORT_KEY)
     .abort_key = IS_ENABLED(CONFIG_MODEM_ABORT_KEY),
     .abort_key_char = CONFIG_MODEM_ABORT_KEY_CHAR,
+#endif
+#if defined(CONFIG_MODEM_FLOW_CONTROL)
     .flow_control = IS_ENABLED(CONFIG_MODEM_FLOW_CONTROL),
+#endif
+#if defined(CONFIG_MODEM_FLASH_PARTITION)
     .flash_partition = "",
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_UPDATE)
     .mcuboot_update = IS_ENABLED(CONFIG_MODEM_MCUBOOT_UPDATE),
+#endif
+#if defined(CONFIG_MODEM_NVS_CHECKPOINTS)
     .nvs_checkpoints = IS_ENABLED(CONFIG_MODEM_NVS_CHECKPOINTS),
+#endif
+#if defined(CONFIG_MODEM_CRYPTO_STREAM)
     .crypto_stream = IS_ENABLED(CONFIG_MODEM_CRYPTO_STREAM),
+#endif
+#if defined(CONFIG_MODEM_UART_DMA)
     .uart_dma = IS_ENABLED(CONFIG_MODEM_UART_DMA),
+#endif
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
     .usb_cdc_acm = IS_ENABLED(CONFIG_MODEM_USB_CDC_ACM),
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
     .mcuboot_validate = IS_ENABLED(CONFIG_MODEM_MCUBOOT_VALIDATE),
+#endif
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
     .signature_verify = IS_ENABLED(CONFIG_MODEM_SIGNATURE_VERIFY),
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
     .encrypted_envelope = IS_ENABLED(CONFIG_MODEM_ENCRYPTED_STREAM),
+#endif
+#if defined(CONFIG_MODEM_SESSION_DISPATCHER)
     .session_dispatcher = IS_ENABLED(CONFIG_MODEM_SESSION_DISPATCHER),
+#endif
+#if defined(CONFIG_MODEM_LOG_ROTATION)
     .log_rotation = IS_ENABLED(CONFIG_MODEM_LOG_ROTATION),
+#endif
+#if defined(CONFIG_MODEM_NFC)
     .nfc_transport = IS_ENABLED(CONFIG_MODEM_NFC)
+#endif
 };
 
 int console_modem_setup_usb_cdc_acm(void)
@@ -166,6 +206,7 @@ static int g_can_count = 0;
 /* Ring buffer UART transport adapter */
 RING_BUF_DECLARE(g_uart_ring_buf, 512);
 
+#if defined(CONFIG_FILE_SYSTEM)
 /* Async storage work item structure */
 struct async_storage_work_t {
     struct k_work work_item;
@@ -185,6 +226,7 @@ static void async_write_handler(struct k_work *work)
         w->res = fs_write(w->zfile, w->data, w->len);
     }
 }
+#endif
 
 /**
  * Auto-Start detection handler.
@@ -194,6 +236,7 @@ static size_t g_autostart_idx = 0;
 
 bool console_modem_check_autostart(uint8_t byte)
 {
+#if defined(CONFIG_MODEM_AUTO_START)
     if (!g_modem_settings.auto_start) return false;
     g_autostart_buf[g_autostart_idx % 8] = byte;
     g_autostart_idx++;
@@ -205,6 +248,7 @@ bool console_modem_check_autostart(uint8_t byte)
             return true;
         }
     }
+#endif
     return false;
 }
 
@@ -221,12 +265,15 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
     uint32_t wait_limit = (timeout_ms == 0) ? 1 : timeout_ms;
 
     while (k_uptime_get() - start <= wait_limit) {
+#if defined(CONFIG_MODEM_RING_BUFFER)
         if (g_modem_settings.ring_buffer && !ring_buf_is_empty(&g_uart_ring_buf)) {
             if (ring_buf_get(&g_uart_ring_buf, &b, 1) == 1) {
                 got_byte = true;
                 break;
             }
-        } else {
+        } else
+#endif
+        {
             int ch = console_getchar();
             if (ch >= 0) {
                 b = (uint8_t)ch;
@@ -241,6 +288,7 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
         return -1;
     }
 
+#if defined(CONFIG_MODEM_ABORT_KEY)
     if (g_modem_settings.abort_key) {
         if (b == g_modem_settings.abort_key_char) {
             return -2;   /* Transfer cancelled by user */
@@ -255,6 +303,7 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
             g_can_count = 0;
         }
     }
+#endif
 
     *byte = b;
     return 0;
@@ -265,6 +314,7 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
  */
 static void update_progress_bar(console_modem_ctx_t *ctx)
 {
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
     if (!g_modem_settings.progress_bar || !ctx || ctx->file_size == 0) return;
     int percent = (int)((ctx->bytes_transferred * 100) / ctx->file_size);
     if (percent > 100) percent = 100;
@@ -282,6 +332,7 @@ static void update_progress_bar(console_modem_ctx_t *ctx)
     }
     printf("] %3d%% (%zu/%zu B, %.1f KB/s)", percent, ctx->bytes_transferred, ctx->file_size, kb_s);
     fflush(stdout);
+#endif
 }
 
 /**
@@ -356,6 +407,7 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
     if (!ctx->zfile_open) return -1;
     ssize_t res;
 
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
     if (g_modem_settings.async_storage) {
         k_work_init(&g_async_work.work_item, async_write_handler);
         g_async_work.zfile = &ctx->zfile;
@@ -367,7 +419,9 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
         k_work_submit(&g_async_work.work_item);
         k_work_flush(&g_async_work.work_item, &g_async_sync);
         res = g_async_work.res;
-    } else {
+    } else
+#endif
+    {
         res = fs_write(&ctx->zfile, buf, len);
     }
 
@@ -712,6 +766,7 @@ int console_modem_tx_zmodem(const char *input_filename)
 
 int console_modem_tx_directory(const char *dir_path, int protocol)
 {
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
     if (!g_modem_settings.directory_transfers || !dir_path) return -1;
 
     struct fs_dir_t dir;
@@ -734,10 +789,16 @@ int console_modem_tx_directory(const char *dir_path, int protocol)
     }
     fs_closedir(&dir);
     return 0;
+#else
+    (void)dir_path;
+    (void)protocol;
+    return -1;
+#endif
 }
 
 int console_modem_mcuboot_update(const char *output_filename, int protocol)
 {
+#if defined(CONFIG_MODEM_MCUBOOT_UPDATE)
     if (!g_modem_settings.mcuboot_update) return -1;
     const char *target = (output_filename && output_filename[0] != '\0') ? output_filename : "firmware.bin";
 
@@ -748,6 +809,11 @@ int console_modem_mcuboot_update(const char *output_filename, int protocol)
     } else {
         return console_modem_rx_zmodem(target);
     }
+#else
+    (void)output_filename;
+    (void)protocol;
+    return -1;
+#endif
 }
 
 #endif /* CONFIG_FILE_SYSTEM */
@@ -769,10 +835,12 @@ static int cmd_modem_rx(const struct shell *sh, size_t argc, char **argv)
         out_path = argv[2];
     }
 
+#if defined(CONFIG_MODEM_FLASH_PARTITION)
     if (out_path && strncmp(out_path, "flash:", 6) == 0) {
         strncpy(g_modem_settings.flash_partition, out_path + 6, sizeof(g_modem_settings.flash_partition) - 1);
         out_path = "flash_image.bin";
     }
+#endif
 
     g_modem_stats.total_transfers++;
 
@@ -856,29 +924,69 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         shell_print(sh, "  Inter-block Delay:   %u ms", g_modem_settings.inter_block_delay_ms);
         shell_print(sh, "  Handshake Delay:     %u ms", g_modem_settings.handshake_delay_ms);
         shell_print(sh, "  Overwrite Mode:      %d", (int)g_modem_settings.overwrite_mode);
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
         shell_print(sh, "  Auto-Resume:         %s", g_modem_settings.enable_resume ? "true" : "false");
+#endif
         shell_print(sh, "  Target Directory:    %s", g_modem_settings.default_target_dir[0] ? g_modem_settings.default_target_dir : "(root)");
         shell_print(sh, "  Sync Interval:       %u blocks", g_modem_settings.sync_interval_blocks);
+#if defined(CONFIG_MODEM_AUTO_START)
         shell_print(sh, "  Auto-Start:          %s", g_modem_settings.auto_start ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
         shell_print(sh, "  Async Storage:       %s", g_modem_settings.async_storage ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
         shell_print(sh, "  Progress Bar:        %s", g_modem_settings.progress_bar ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
         shell_print(sh, "  Directory Transfers: %s", g_modem_settings.directory_transfers ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_RING_BUFFER)
         shell_print(sh, "  Ring Buffer Transport: %s", g_modem_settings.ring_buffer ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_ABORT_KEY)
         shell_print(sh, "  Abort Key Monitor:   %s", g_modem_settings.abort_key ? "true" : "false");
         shell_print(sh, "  Abort Key Char:      0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
+#endif
+#if defined(CONFIG_MODEM_FLOW_CONTROL)
         shell_print(sh, "  Flow Control:        %s", g_modem_settings.flow_control ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_FLASH_PARTITION)
         shell_print(sh, "  Flash Partition:     %s", g_modem_settings.flash_partition[0] ? g_modem_settings.flash_partition : "(none)");
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_UPDATE)
         shell_print(sh, "  MCUBoot Update:      %s", g_modem_settings.mcuboot_update ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_NVS_CHECKPOINTS)
         shell_print(sh, "  NVS Checkpoints:     %s", g_modem_settings.nvs_checkpoints ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_CRYPTO_STREAM)
         shell_print(sh, "  Crypto Stream:       %s", g_modem_settings.crypto_stream ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_UART_DMA)
         shell_print(sh, "  UART DMA Adapter:    %s", g_modem_settings.uart_dma ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
         shell_print(sh, "  USB CDC-ACM Adapter: %s", g_modem_settings.usb_cdc_acm ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
         shell_print(sh, "  MCUBoot Validate:    %s", g_modem_settings.mcuboot_validate ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
         shell_print(sh, "  Signature Verify:    %s", g_modem_settings.signature_verify ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
         shell_print(sh, "  Encrypted Envelope:  %s", g_modem_settings.encrypted_envelope ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_SESSION_DISPATCHER)
         shell_print(sh, "  Session Dispatcher:  %s", g_modem_settings.session_dispatcher ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_LOG_ROTATION)
         shell_print(sh, "  Log Rotation:        %s", g_modem_settings.log_rotation ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_NFC)
         shell_print(sh, "  NFC Transport:       %s", g_modem_settings.nfc_transport ? "true" : "false");
+#endif
         return 0;
     }
 
@@ -905,9 +1013,11 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "overwrite_mode") == 0) {
             g_modem_settings.overwrite_mode = (modem_overwrite_mode_t)val;
             shell_print(sh, "Overwrite mode set to %d", (int)val);
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
         } else if (strcmp(param, "enable_resume") == 0 || strcmp(param, "resume") == 0) {
             g_modem_settings.enable_resume = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Auto-resume set to %s", g_modem_settings.enable_resume ? "true" : "false");
+#endif
         } else if (strcmp(param, "target_dir") == 0) {
             strncpy(g_modem_settings.default_target_dir, val_str, sizeof(g_modem_settings.default_target_dir) - 1);
             g_modem_settings.default_target_dir[sizeof(g_modem_settings.default_target_dir) - 1] = '\0';
@@ -915,67 +1025,105 @@ static int cmd_modem_config(const struct shell *sh, size_t argc, char **argv)
         } else if (strcmp(param, "sync_interval") == 0) {
             g_modem_settings.sync_interval_blocks = val;
             shell_print(sh, "Sync interval set to %u blocks", val);
+#if defined(CONFIG_MODEM_AUTO_START)
         } else if (strcmp(param, "auto_start") == 0) {
             g_modem_settings.auto_start = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Auto-start set to %s", g_modem_settings.auto_start ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
         } else if (strcmp(param, "async_storage") == 0) {
             g_modem_settings.async_storage = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Async storage set to %s", g_modem_settings.async_storage ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
         } else if (strcmp(param, "progress_bar") == 0) {
             g_modem_settings.progress_bar = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Progress bar set to %s", g_modem_settings.progress_bar ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
         } else if (strcmp(param, "directory_transfers") == 0) {
             g_modem_settings.directory_transfers = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Directory transfers set to %s", g_modem_settings.directory_transfers ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_RING_BUFFER)
         } else if (strcmp(param, "ring_buffer") == 0) {
             g_modem_settings.ring_buffer = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Ring buffer transport set to %s", g_modem_settings.ring_buffer ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_ABORT_KEY)
         } else if (strcmp(param, "abort_key") == 0) {
             g_modem_settings.abort_key = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Abort key monitor set to %s", g_modem_settings.abort_key ? "true" : "false");
         } else if (strcmp(param, "abort_char") == 0 || strcmp(param, "abort_key_char") == 0) {
             g_modem_settings.abort_key_char = (uint8_t)val;
             shell_print(sh, "Abort key character set to 0x%02X (%u)", g_modem_settings.abort_key_char, g_modem_settings.abort_key_char);
+#endif
+#if defined(CONFIG_MODEM_FLOW_CONTROL)
         } else if (strcmp(param, "flow_control") == 0) {
             g_modem_settings.flow_control = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Flow control set to %s", g_modem_settings.flow_control ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_FLASH_PARTITION)
         } else if (strcmp(param, "flash_partition") == 0 || strcmp(param, "partition") == 0) {
             strncpy(g_modem_settings.flash_partition, val_str, sizeof(g_modem_settings.flash_partition) - 1);
             g_modem_settings.flash_partition[sizeof(g_modem_settings.flash_partition) - 1] = '\0';
             shell_print(sh, "Target flash partition set to %s", g_modem_settings.flash_partition);
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_UPDATE)
         } else if (strcmp(param, "mcuboot_update") == 0) {
             g_modem_settings.mcuboot_update = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "MCUBoot update set to %s", g_modem_settings.mcuboot_update ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_NVS_CHECKPOINTS)
         } else if (strcmp(param, "nvs_checkpoints") == 0) {
             g_modem_settings.nvs_checkpoints = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "NVS checkpoints set to %s", g_modem_settings.nvs_checkpoints ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_CRYPTO_STREAM)
         } else if (strcmp(param, "crypto_stream") == 0) {
             g_modem_settings.crypto_stream = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Crypto stream set to %s", g_modem_settings.crypto_stream ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_UART_DMA)
         } else if (strcmp(param, "uart_dma") == 0) {
             g_modem_settings.uart_dma = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "UART DMA adapter set to %s", g_modem_settings.uart_dma ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
         } else if (strcmp(param, "usb_cdc_acm") == 0) {
             g_modem_settings.usb_cdc_acm = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "USB CDC-ACM adapter set to %s", g_modem_settings.usb_cdc_acm ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
         } else if (strcmp(param, "mcuboot_validate") == 0) {
             g_modem_settings.mcuboot_validate = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "MCUBoot validation set to %s", g_modem_settings.mcuboot_validate ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
         } else if (strcmp(param, "signature_verify") == 0) {
             g_modem_settings.signature_verify = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Signature verify set to %s", g_modem_settings.signature_verify ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
         } else if (strcmp(param, "encrypted_envelope") == 0) {
             g_modem_settings.encrypted_envelope = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Encrypted envelope set to %s", g_modem_settings.encrypted_envelope ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_SESSION_DISPATCHER)
         } else if (strcmp(param, "session_dispatcher") == 0) {
             g_modem_settings.session_dispatcher = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Session dispatcher set to %s", g_modem_settings.session_dispatcher ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_LOG_ROTATION)
         } else if (strcmp(param, "log_rotation") == 0) {
             g_modem_settings.log_rotation = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "Log rotation set to %s", g_modem_settings.log_rotation ? "true" : "false");
+#endif
+#if defined(CONFIG_MODEM_NFC)
         } else if (strcmp(param, "nfc_transport") == 0 || strcmp(param, "nfc") == 0) {
             g_modem_settings.nfc_transport = (strcmp(val_str, "true") == 0 || strcmp(val_str, "1") == 0);
             shell_print(sh, "NFC transport set to %s", g_modem_settings.nfc_transport ? "true" : "false");
+#endif
         } else {
             shell_error(sh, "Unknown configuration parameter: %s", param);
             return -1;
