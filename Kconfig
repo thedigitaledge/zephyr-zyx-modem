@@ -202,10 +202,12 @@ config MODEM_LOG_ROTATION
 	  Enable flash sector wear-aware log chunking and automated rotation.
 
 config MODEM_NFC
-	bool "NFC Data Communications Transport Adapter"
-	default y
+	bool "NFC Data Communications Transport Adapter (nRF Connect SDK / Zephyr NFC)"
+	default n
+	depends on HAS_HW_NRF_NFC || NFC_T4T_NRFXLIB || NFC_NDEF || NFC_T4T_APDU
 	help
-	  Enable Near Field Communication (NFC) NDEF serial modem transport adapter.
+	  Enable Near Field Communication (NFC) NDEF serial modem transport adapter
+	  integrated with nRF Connect SDK / Zephyr NFC Subsystem and Type 4 Tag (T4T) emulation.
 
 config MODEM_PACKET_TIMEOUT_MS
 	int "Default Packet Response Timeout (ms)"

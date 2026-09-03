@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
- * Integrates with Nordic Semiconductor / Zephyr NFC Type 4 Tag (T4T) emulation API.
+ * Integrated with nRF Connect SDK / Zephyr NFC Subsystem and Type 4 Tag (T4T) emulation API.
  */
 
 #include <modem/nfc_transport.h>
@@ -59,6 +59,12 @@ int nfc_transport_init(const nfc_transport_config_t *config)
 
 int nfc_transport_start_t4t_emulation(void)
 {
+#if defined(CONFIG_NFC_T4T_NRFXLIB)
+    int err = nfc_t4t_emulation_start();
+    if (err) {
+        return err;
+    }
+#endif
     nfc_field_active = true;
     nfc_t4t_emulating = true;
     return 0;
@@ -66,6 +72,9 @@ int nfc_transport_start_t4t_emulation(void)
 
 int nfc_transport_stop_t4t_emulation(void)
 {
+#if defined(CONFIG_NFC_T4T_NRFXLIB)
+    nfc_t4t_emulation_stop();
+#endif
     nfc_field_active = false;
     nfc_t4t_emulating = false;
     return 0;

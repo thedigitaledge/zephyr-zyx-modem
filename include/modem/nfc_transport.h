@@ -3,8 +3,7 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Header file for NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
- * Provides ring-buffered data streams, NDEF Type-4 Tag (T4T) emulation API integration,
- * field loss detection timeouts, and transmission/reception callbacks.
+ * Integrated with nRF Connect SDK / Zephyr NFC Subsystem and Type 4 Tag (T4T) emulation API.
  */
 
 #ifndef MODEM_NFC_TRANSPORT_H_
@@ -13,6 +12,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+#if defined(CONFIG_NFC_T4T_NRFXLIB) || defined(CONFIG_NFC_NDEF) || defined(CONFIG_NFC_T4T_APDU)
+#include <nfc/t4t/msgtag.h>
+#include <nfc/ndef/msg.h>
+#include <nfc/ndef/record.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,19 +69,19 @@ typedef struct {
 int nfc_transport_init(const nfc_transport_config_t *config);
 
 /**
- * @brief Start NFC Type 4 Tag (T4T) emulation mode.
+ * @brief Start NFC Type 4 Tag (T4T) emulation mode via nRF Connect SDK / Zephyr API.
  * @return 0 on success, negative error code on failure.
  */
 int nfc_transport_start_t4t_emulation(void);
 
 /**
- * @brief Stop NFC Type 4 Tag (T4T) emulation mode.
+ * @brief Stop NFC Type 4 Tag (T4T) emulation mode via nRF Connect SDK / Zephyr API.
  * @return 0 on success, negative error code on failure.
  */
 int nfc_transport_stop_t4t_emulation(void);
 
 /**
- * @brief Nordic / Zephyr NFC T4T Event Handler Callback.
+ * @brief Nordic nRF Connect SDK / Zephyr NFC T4T Event Handler Callback.
  *
  * Processes field status changes, NDEF updates, and ISODEP data indications.
  *
