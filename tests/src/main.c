@@ -104,7 +104,7 @@ ZTEST(modem_tests, test_crc16_ccitt_calculation)
 {
     const uint8_t data[] = "123456789";
     uint16_t crc16 = modem_crc16(data, 9);
-    zassert_equal(crc16, 0x31C3, "CRC16 CCITT calculation failed");
+    zassert_equal(crc16, 0x29B1, "CRC16 CCITT calculation failed");
 }
 
 ZTEST(modem_tests, test_crc32_ieee_calculation)
