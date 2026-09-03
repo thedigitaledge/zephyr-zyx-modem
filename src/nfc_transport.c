@@ -7,6 +7,9 @@
  */
 
 #include <modem/nfc_transport.h>
+
+#if defined(CONFIG_MODEM_NFC)
+
 #include <zephyr/kernel.h>
 #include <string.h>
 
@@ -269,3 +272,5 @@ void nfc_transport_reset_stats(void)
 {
     memset(&g_nfc_stats, 0, sizeof(g_nfc_stats));
 }
+
+#endif /* CONFIG_MODEM_NFC */

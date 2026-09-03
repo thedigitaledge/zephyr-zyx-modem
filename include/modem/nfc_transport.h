@@ -12,6 +12,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include <errno.h>
 
 #if defined(CONFIG_NFC_T4T_NRFXLIB) || defined(CONFIG_NFC_NDEF_MSG)
 #include <nfc/t4t/emulation.h>
@@ -65,113 +67,47 @@ typedef struct {
     void *user_data;            /**< User context pointer */
 } nfc_transport_config_t;
 
-/**
- * @brief Initialize concrete nRF Connect SDK NFC T4T modem transport adapter.
- * @param config Configuration parameters (NULL for default 1024-byte ring buffers).
- * @return 0 on success, negative error code on failure.
- */
+#if defined(CONFIG_MODEM_NFC)
+
 int nfc_transport_init(const nfc_transport_config_t *config);
-
-/**
- * @brief Start NFC Type 4 Tag (T4T) emulation using nRF Connect SDK nfc_t4t_emulation_start().
- * @return 0 on success, negative error code on failure.
- */
 int nfc_transport_start(void);
-
-/**
- * @brief Stop NFC Type 4 Tag (T4T) emulation using nRF Connect SDK nfc_t4t_emulation_stop().
- * @return 0 on success, negative error code on failure.
- */
 int nfc_transport_stop(void);
-
-/**
- * @brief Start NFC T4T emulation mode (alias for nfc_transport_start).
- */
 int nfc_transport_start_t4t_emulation(void);
-
-/**
- * @brief Stop NFC T4T emulation mode (alias for nfc_transport_stop).
- */
 int nfc_transport_stop_t4t_emulation(void);
-
-/**
- * @brief Nordic nRF Connect SDK NFC T4T Event Handler Callback (4 arguments matching nfc_t4t_callback_t).
- * @param event T4T event enum value.
- * @param data Data buffer associated with event (or NULL).
- * @param data_len Length of data buffer.
- * @param context User context pointer.
- */
 void nfc_transport_t4t_event_handler(int event, const uint8_t *data, size_t data_len, void *context);
-
-/**
- * @brief Read byte from NFC NDEF transport stream with timeout polling.
- * @param byte Output pointer for received byte.
- * @param timeout_ms Timeout in milliseconds.
- * @param user_data Opaque user context.
- * @return 0 on success, -1 on timeout/error, -2 on RF field loss cancellation.
- */
 int nfc_transport_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data);
-
-/**
- * @brief Write bytes to NFC NDEF transport stream for T4T NDEF tag publication.
- * @param buf Data buffer to send.
- * @param len Length of data in bytes.
- * @param user_data Opaque user context.
- * @return 0 on success, negative error code on failure.
- */
 int nfc_transport_write_bytes(const uint8_t *buf, size_t len, void *user_data);
-
-/**
- * @brief Process incoming raw NDEF record payload or serial bytes from nRF Connect SDK NFC reader.
- * @param data Received NDEF payload or byte buffer.
- * @param len Received data length.
- */
 void nfc_transport_rx_callback(const uint8_t *data, size_t len);
-
-/**
- * @brief Flush pending TX ring buffer bytes as an NDEF MIME payload record.
- * @param out_buf Output buffer to store constructed NDEF message.
- * @param out_capacity Capacity of output buffer.
- * @param out_len Pointer receiving length of constructed NDEF message.
- * @return 0 on success, negative error code on failure.
- */
 int nfc_transport_flush_tx_ndef(uint8_t *out_buf, size_t out_capacity, size_t *out_len);
-
-/**
- * @brief Set RF field presence status.
- * @param active true if RF field is active/present, false on field loss.
- */
 void nfc_transport_set_field_active(bool active);
-
-/**
- * @brief Check if NFC RF field presence is currently active.
- * @return true if field detected and active, false otherwise.
- */
 bool nfc_transport_is_active(void);
-
-/**
- * @brief Get cumulative NFC transport diagnostic statistics.
- * @param stats Output pointer receiving statistics.
- */
 void nfc_transport_get_stats(nfc_transport_stats_t *stats);
-
-/**
- * @brief Reset cumulative NFC transport statistics counters.
- */
 void nfc_transport_reset_stats(void);
-
-/**
- * @brief Helper function to encode raw payload into NDEF Media Record using nRF Connect SDK API formats.
- * @param payload Raw serial payload data.
- * @param payload_len Payload length in bytes.
- * @param ndef_buf Output buffer receiving encoded NDEF frame.
- * @param buf_capacity Capacity of output buffer.
- * @param ndef_len Output pointer receiving total encoded NDEF record length.
- * @return 0 on success, negative error code on failure.
- */
 int nfc_transport_encode_ndef_record(const uint8_t *payload, size_t payload_len,
                                      uint8_t *ndef_buf, size_t buf_capacity,
                                      size_t *ndef_len);
+
+#else
+
+static inline int nfc_transport_init(const nfc_transport_config_t *config) { (void)config; return -ENOTSUP; }
+static inline int nfc_transport_start(void) { return -ENOTSUP; }
+static inline int nfc_transport_stop(void) { return -ENOTSUP; }
+static inline int nfc_transport_start_t4t_emulation(void) { return -ENOTSUP; }
+static inline int nfc_transport_stop_t4t_emulation(void) { return -ENOTSUP; }
+static inline void nfc_transport_t4t_event_handler(int event, const uint8_t *data, size_t data_len, void *context) { (void)event; (void)data; (void)data_len; (void)context; }
+static inline int nfc_transport_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data) { (void)byte; (void)timeout_ms; (void)user_data; return -ENOTSUP; }
+static inline int nfc_transport_write_bytes(const uint8_t *buf, size_t len, void *user_data) { (void)buf; (void)len; (void)user_data; return -ENOTSUP; }
+static inline void nfc_transport_rx_callback(const uint8_t *data, size_t len) { (void)data; (void)len; }
+static inline int nfc_transport_flush_tx_ndef(uint8_t *out_buf, size_t out_capacity, size_t *out_len) { (void)out_buf; (void)out_capacity; (void)out_len; return -ENOTSUP; }
+static inline void nfc_transport_set_field_active(bool active) { (void)active; }
+static inline bool nfc_transport_is_active(void) { return false; }
+static inline void nfc_transport_get_stats(nfc_transport_stats_t *stats) { if (stats) { memset(stats, 0, sizeof(*stats)); } }
+static inline void nfc_transport_reset_stats(void) {}
+static inline int nfc_transport_encode_ndef_record(const uint8_t *payload, size_t payload_len,
+                                            uint8_t *ndef_buf, size_t buf_capacity,
+                                            size_t *ndef_len) { (void)payload; (void)payload_len; (void)ndef_buf; (void)buf_capacity; (void)ndef_len; return -ENOTSUP; }
+
+#endif /* CONFIG_MODEM_NFC */
 
 #ifdef __cplusplus
 }
