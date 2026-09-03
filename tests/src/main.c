@@ -408,22 +408,27 @@ ZTEST(modem_tests, test_signature_verification_and_encrypted_stream)
 
 ZTEST(modem_tests, test_console_modem_settings_and_options)
 {
-    console_modem_settings_t current;
-    console_modem_settings_get(&current);
-    zassert_equal(current.packet_timeout_ms, 3000, "Default packet timeout mismatch");
-    zassert_equal(current.byte_timeout_ms, 1000, "Default byte timeout mismatch");
-    zassert_equal(current.max_retries, 10, "Default max retries mismatch");
+    console_modem_settings_t initial;
+    console_modem_settings_get(&initial);
 
-    console_modem_settings_t updated = current;
+    zassert_equal(initial.packet_timeout_ms, CONFIG_MODEM_PACKET_TIMEOUT_MS, "Default packet timeout mismatch");
+    zassert_equal(initial.byte_timeout_ms, CONFIG_MODEM_BYTE_TIMEOUT_MS, "Default byte timeout mismatch");
+    zassert_equal(initial.max_retries, CONFIG_MODEM_MAX_RETRIES, "Default max retries mismatch");
+
+    console_modem_settings_t updated = initial;
     updated.packet_timeout_ms = 6000;
     updated.byte_timeout_ms = 1500;
     updated.max_retries = 20;
     console_modem_settings_set(&updated);
 
+    console_modem_settings_t current;
     console_modem_settings_get(&current);
     zassert_equal(current.packet_timeout_ms, 6000, "Updated packet timeout mismatch");
     zassert_equal(current.byte_timeout_ms, 1500, "Updated byte timeout mismatch");
     zassert_equal(current.max_retries, 20, "Updated max retries mismatch");
+
+    /* Restore initial settings state to prevent test pollution */
+    console_modem_settings_set(&initial);
 }
 
 ZTEST(modem_tests, test_mcuboot_header_validation)
