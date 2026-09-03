@@ -209,7 +209,12 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     zassert_equal(sock_init, 0, "Network socket transport init failed");
     zassert_equal(net_socket_transport_close(NULL), 0, "Socket close failed");
 
-    nfc_transport_config_t nfc_cfg = { .rx_buffer_size = 256, .field_timeout_ms = 1000 };
+    nfc_transport_config_t nfc_cfg = {
+        .rx_buffer_size = 256,
+        .tx_buffer_size = 256,
+        .field_timeout_ms = 1000,
+        .auto_ndef_framing = true
+    };
     int nfc_init = nfc_transport_init(&nfc_cfg);
     zassert_equal(nfc_init, 0, "NFC transport init failed");
     zassert_true(nfc_transport_is_active(), "NFC field should be active");
@@ -218,6 +223,30 @@ ZTEST(modem_tests, test_ble_nus_and_socket_transports)
     nfc_transport_rx_callback(nfc_sample, 3);
     zassert_equal(nfc_transport_read_byte(&b, 10, NULL), 0, "NFC read byte failed");
     zassert_equal(b, 'N', "NFC read byte mismatch");
+
+    /* Test NDEF Record Encoding and Ring Buffer Flushing */
+    uint8_t tx_payload[] = "NFC Data Payload";
+    zassert_equal(nfc_transport_write_bytes(tx_payload, sizeof(tx_payload), NULL), 0, "NFC write bytes failed");
+
+    uint8_t ndef_out[256];
+    size_t ndef_len = 0;
+    zassert_equal(nfc_transport_flush_tx_ndef(ndef_out, sizeof(ndef_out), &ndef_len), 0, "NFC flush NDEF failed");
+    zassert_true(ndef_len > sizeof(tx_payload), "NDEF length should include header bytes");
+
+    /* Test NDEF Record Decoding Callback */
+    nfc_transport_rx_callback(ndef_out, ndef_len);
+    uint8_t decoded_byte = 0;
+    zassert_equal(nfc_transport_read_byte(&decoded_byte, 10, NULL), 0, "NFC decoded read byte failed");
+    zassert_equal(decoded_byte, 'N', "NFC decoded byte mismatch");
+
+    /* Test Field Loss Detection */
+    nfc_transport_set_field_active(false);
+    zassert_false(nfc_transport_is_active(), "NFC field should be inactive after toggle");
+    zassert_equal(nfc_transport_read_byte(&b, 10, NULL), -2, "NFC read byte on field loss should return -2");
+
+    nfc_transport_stats_t nfc_stats;
+    nfc_transport_get_stats(&nfc_stats);
+    zassert_true(nfc_stats.field_loss_count > 0, "Field loss count stat should be incremented");
 }
 
 ZTEST(modem_tests, test_stream_decompress_and_delta_update)
