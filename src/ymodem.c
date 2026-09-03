@@ -47,7 +47,8 @@ static void parse_block0(const uint8_t *payload, size_t len, ymodem_file_info_t 
         return;
     }
 
-    size_t name_len = strnlen((const char *)payload, len);
+    const char *null_ptr = (const char *)memchr(payload, '\0', len);
+    size_t name_len = null_ptr ? (size_t)(null_ptr - (const char *)payload) : len;
     if (name_len >= sizeof(info->filename)) {
         name_len = sizeof(info->filename) - 1;
     }
@@ -58,7 +59,8 @@ static void parse_block0(const uint8_t *payload, size_t len, ymodem_file_info_t 
     if (pos < len && payload[pos] != 0) {
         /* Parse file length string in decimal ASCII format with bounded copy */
         char num_buf[32] = {0};
-        size_t num_len = strnlen((const char *)&payload[pos], len - pos);
+        const char *num_null = (const char *)memchr(&payload[pos], '\0', len - pos);
+        size_t num_len = num_null ? (size_t)(num_null - (const char *)&payload[pos]) : (len - pos);
         if (num_len >= sizeof(num_buf)) {
             num_len = sizeof(num_buf) - 1;
         }

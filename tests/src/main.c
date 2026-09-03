@@ -133,7 +133,7 @@ ZTEST(modem_tests, test_xmodem_crc_receive)
     xmodem_status_t status = xmodem_receive(&cbs, &cfg, &total_rx);
     zassert_equal(status, XMODEM_OK, "XMODEM receive failed");
     zassert_equal(total_rx, 128, "Total received size mismatch");
-    zassert_memequal(received_payload, block, 128, "Payload mismatch");
+    zassert_mem_equal(received_payload, block, 128, "Payload mismatch");
 }
 
 ZTEST(modem_tests, test_xmodem_timeout_and_cancel_failures)
@@ -274,7 +274,7 @@ ZTEST(modem_tests, test_stream_decompress_and_delta_update)
     int res = stream_decompress_process(&dctx, raw_data, sizeof(raw_data), out_buf, sizeof(out_buf), &produced);
     zassert_equal(res, 0, "Decompress process failed");
     zassert_equal(produced, sizeof(raw_data), "Decompress produced len mismatch");
-    zassert_memequal(out_buf, raw_data, sizeof(raw_data), "Decompressed payload mismatch");
+    zassert_mem_equal(out_buf, raw_data, sizeof(raw_data), "Decompressed payload mismatch");
 
     modem_delta_ctx_t delta_ctx;
     delta_update_init(&delta_ctx, 100);
@@ -286,7 +286,7 @@ ZTEST(modem_tests, test_stream_decompress_and_delta_update)
     res = delta_update_apply_chunk(&delta_ctx, diff, sizeof(diff), NULL, patch_out, sizeof(patch_out), &patch_len);
     zassert_equal(res, 0, "Delta patch apply failed");
     zassert_equal(patch_len, 3, "Delta patch produced len mismatch");
-    zassert_memequal(patch_out, diff, 3, "Delta patch content mismatch");
+    zassert_mem_equal(patch_out, diff, 3, "Delta patch content mismatch");
 }
 
 ZTEST(modem_tests, test_session_dispatcher_and_log_rotation)
@@ -353,7 +353,7 @@ ZTEST(modem_tests, test_signature_and_encryption)
 
     encrypted_stream_decrypt(&enc_ctx, cipher, c_len, decrypted, sizeof(decrypted), &d_len);
     zassert_equal(d_len, sizeof(plain), "Decrypted length mismatch");
-    zassert_memequal(decrypted, plain, sizeof(plain), "Decrypted payload mismatch");
+    zassert_mem_equal(decrypted, plain, sizeof(plain), "Decrypted payload mismatch");
 }
 
 ZTEST(modem_tests, test_console_modem_settings_and_options)

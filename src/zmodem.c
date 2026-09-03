@@ -419,7 +419,8 @@ zmodem_status_t zmodem_receive(const zmodem_rx_callbacks_t *callbacks)
 
             zmodem_file_info_t info;
             memset(&info, 0, sizeof(info));
-            size_t nlen = strnlen((const char *)sub_buf, sub_len);
+            const char *null_ptr = (const char *)memchr(sub_buf, '\0', sub_len);
+            size_t nlen = null_ptr ? (size_t)(null_ptr - (const char *)sub_buf) : sub_len;
             if (nlen >= sizeof(info.filename)) nlen = sizeof(info.filename) - 1;
             memcpy(info.filename, sub_buf, nlen);
             info.filename[nlen] = '\0';

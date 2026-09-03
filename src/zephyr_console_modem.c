@@ -269,12 +269,12 @@ static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data
     return 0;
 }
 
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
 /**
  * Real-time shell progress bar renderer.
  */
 static void update_progress_bar(console_modem_ctx_t *ctx)
 {
-#if defined(CONFIG_MODEM_PROGRESS_BAR)
     if (!g_modem_settings.progress_bar || !ctx || ctx->file_size == 0) return;
     int percent = (int)((ctx->bytes_transferred * 100) / ctx->file_size);
     if (percent > 100) percent = 100;
@@ -292,8 +292,8 @@ static void update_progress_bar(console_modem_ctx_t *ctx)
     }
     printf("] %3d%% (%zu/%zu B, %.1f KB/s)", percent, ctx->bytes_transferred, ctx->file_size, kb_s);
     fflush(stdout);
-#endif
 }
+#endif
 
 /**
  * Standard I/O adapter writing bytes to Zephyr console UART.
@@ -391,6 +391,10 @@ static int write_file_data(console_modem_ctx_t *ctx, const uint8_t *buf, size_t 
 
     if (res < 0) return -1;
     ctx->bytes_transferred += (size_t)res;
+
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
+    update_progress_bar(ctx);
+#endif
 
     if (g_modem_settings.sync_interval_blocks > 0) {
         fs_sync(&ctx->zfile);
