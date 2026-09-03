@@ -213,6 +213,10 @@ static void async_write_handler(struct k_work *work)
  */
 static int console_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 {
+    if (g_active_channel && g_active_channel->read_byte) {
+        return g_active_channel->read_byte(byte, timeout_ms, g_active_channel->user_data);
+    }
+
     (void)user_data;
     uint8_t b = 0;
     bool got_byte = false;
@@ -296,6 +300,10 @@ static void update_progress_bar(console_modem_ctx_t *ctx)
  */
 static int console_write_bytes(const uint8_t *buf, size_t len, void *user_data)
 {
+    if (g_active_channel && g_active_channel->write_bytes) {
+        return g_active_channel->write_bytes(buf, len, g_active_channel->user_data);
+    }
+
     (void)user_data;
     for (size_t i = 0; i < len; i++) {
         console_putchar(buf[i]);

@@ -25,7 +25,8 @@ typedef enum {
     MODEM_CHANNEL_UART = 0,
     MODEM_CHANNEL_USB_CDC_ACM,
     MODEM_CHANNEL_BLE_NUS,
-    MODEM_CHANNEL_SOCKET
+    MODEM_CHANNEL_SOCKET,
+    MODEM_CHANNEL_NFC
 } modem_channel_type_t;
 
 /**

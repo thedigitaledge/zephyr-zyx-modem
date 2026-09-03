@@ -302,8 +302,12 @@ ZTEST(modem_tests, test_session_dispatcher_and_log_rotation)
     zassert_true(id2 >= 0, "Failed to create session 2");
     zassert_equal(session_dispatcher_get_active_count(), 2, "Active sessions should be 2");
 
+    int id3 = session_dispatcher_create(MODEM_CHANNEL_NFC);
+    zassert_true(id3 >= 0, "Failed to create NFC session");
+    zassert_equal(session_dispatcher_get_active_count(), 3, "Active sessions should be 3");
+
     session_dispatcher_close(id1);
-    zassert_equal(session_dispatcher_get_active_count(), 1, "Active sessions after close should be 1");
+    zassert_equal(session_dispatcher_get_active_count(), 2, "Active sessions after close should be 2");
 
     log_rotation_ctx_t log_ctx;
     log_rotation_config_t log_cfg = {
