@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Implementation of NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
- * Integrated with nRF Connect SDK / Zephyr NFC Subsystem and Type 4 Tag (T4T) emulation API.
+ * Integrated strictly with nRF Connect SDK NFC Subsystem and Type 4 Tag (T4T) emulation API.
  */
 
 #include <modem/nfc_transport.h>

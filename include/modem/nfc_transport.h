@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
  *
  * Header file for NFC (Near Field Communication) NDEF Modem Transport Adapter for Zephyr OS.
- * Integrated with nRF Connect SDK / Zephyr NFC Subsystem and Type 4 Tag (T4T) emulation API.
+ * Integrated strictly with nRF Connect SDK NFC Subsystem and Type 4 Tag (T4T) emulation API.
  */
 
 #ifndef MODEM_NFC_TRANSPORT_H_
@@ -13,12 +13,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#if defined(CONFIG_NFC_T4T_NRFXLIB) || defined(CONFIG_NFC_NDEF) || defined(CONFIG_NFC_NDEF_MSG)
+#if defined(CONFIG_NFC_T4T_NRFXLIB) || defined(CONFIG_NFC_NDEF_MSG) || defined(CONFIG_NFC_NDEF_RECORD)
 #include <nfc/t4t/msgtag.h>
 #include <nfc/t4t/ndef_file.h>
 #include <nfc/ndef/msg.h>
 #include <nfc/ndef/record.h>
-#include <nfc/ndef/uri_msg.h>
 #endif
 
 #ifdef __cplusplus
@@ -28,7 +27,7 @@ extern "C" {
 #define NFC_MAX_NDEF_PAYLOAD_SIZE 512
 
 /**
- * @brief Nordic / Zephyr NFC T4T Emulation Event Types
+ * @brief Nordic / nRF Connect SDK NFC T4T Emulation Event Types
  */
 typedef enum {
     NFC_T4T_EVENT_FIELD_ON = 0,   /**< RF field detected by NFC controller */
@@ -71,22 +70,19 @@ typedef struct {
 int nfc_transport_init(const nfc_transport_config_t *config);
 
 /**
- * @brief Start NFC Type 4 Tag (T4T) emulation mode via nRF Connect SDK / Zephyr API.
+ * @brief Start NFC Type 4 Tag (T4T) emulation mode via nRF Connect SDK API.
  * @return 0 on success, negative error code on failure.
  */
 int nfc_transport_start_t4t_emulation(void);
 
 /**
- * @brief Stop NFC Type 4 Tag (T4T) emulation mode via nRF Connect SDK / Zephyr API.
+ * @brief Stop NFC Type 4 Tag (T4T) emulation mode via nRF Connect SDK API.
  * @return 0 on success, negative error code on failure.
  */
 int nfc_transport_stop_t4t_emulation(void);
 
 /**
- * @brief Nordic nRF Connect SDK / Zephyr NFC T4T Event Handler Callback.
- *
- * Processes field status changes, NDEF updates, and ISODEP data indications.
- *
+ * @brief Nordic nRF Connect SDK NFC T4T Event Handler Callback.
  * @param event T4T event type.
  * @param data Data buffer associated with event (or NULL).
  * @param len Length of data buffer.
@@ -112,7 +108,7 @@ int nfc_transport_read_byte(uint8_t *byte, uint32_t timeout_ms, void *user_data)
 int nfc_transport_write_bytes(const uint8_t *buf, size_t len, void *user_data);
 
 /**
- * @brief Process incoming raw NDEF record payload or serial bytes from NFC reader.
+ * @brief Process incoming raw NDEF record payload or serial bytes from nRF Connect SDK NFC reader.
  * @param data Received NDEF payload or byte buffer.
  * @param len Received data length.
  */
@@ -128,7 +124,7 @@ void nfc_transport_rx_callback(const uint8_t *data, size_t len);
 int nfc_transport_flush_tx_ndef(uint8_t *out_buf, size_t out_capacity, size_t *out_len);
 
 /**
- * @brief Set RF field presence status (called by physical NFC controller ISR/driver).
+ * @brief Set RF field presence status.
  * @param active true if RF field is active/present, false on field loss.
  */
 void nfc_transport_set_field_active(bool active);
@@ -151,7 +147,7 @@ void nfc_transport_get_stats(nfc_transport_stats_t *stats);
 void nfc_transport_reset_stats(void);
 
 /**
- * @brief Helper function to encode raw payload into NDEF Media Record (mime: "application/x-modem").
+ * @brief Helper function to encode raw payload into NDEF Media Record using nRF Connect SDK API formats.
  * @param payload Raw serial payload data.
  * @param payload_len Payload length in bytes.
  * @param ndef_buf Output buffer receiving encoded NDEF frame.
