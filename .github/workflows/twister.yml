@@ -18,6 +18,11 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y device-tree-compiler
+
       - name: Setup Zephyr OS Environment
         uses: zephyrproject-rtos/action-zephyr-setup@v1
         with:
