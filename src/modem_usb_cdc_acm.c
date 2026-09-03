@@ -7,7 +7,9 @@
 
 #include "zephyr_console_modem.h"
 
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
 int console_modem_setup_usb_cdc_acm(void)
 {
     return 0;
 }
+#endif

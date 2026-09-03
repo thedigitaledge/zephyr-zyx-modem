@@ -6,6 +6,8 @@
  */
 
 #include "zephyr_console_modem.h"
+
+#if defined(CONFIG_MODEM_AUTO_START)
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -15,7 +17,6 @@ static size_t g_autostart_idx = 0;
 
 bool console_modem_check_autostart(uint8_t byte)
 {
-#if defined(CONFIG_MODEM_AUTO_START)
     g_autostart_buf[g_autostart_idx % 8] = byte;
     g_autostart_idx++;
     if (g_autostart_idx >= 3) {
@@ -26,8 +27,6 @@ bool console_modem_check_autostart(uint8_t byte)
             return true;
         }
     }
-#else
-    (void)byte;
-#endif
     return false;
 }
+#endif
