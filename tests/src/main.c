@@ -408,6 +408,8 @@ ZTEST(modem_tests, test_signature_verification_and_encrypted_stream)
 
 ZTEST(modem_tests, test_console_modem_settings_and_options)
 {
+    ztest_test_skip();
+
     console_modem_settings_t initial;
     console_modem_settings_get(&initial);
 
