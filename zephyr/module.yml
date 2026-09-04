@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
+#
+# Zephyr module configuration file.
+
+name: zephyr_console_modem
+build:
+  cmake: .
+  kconfig: Kconfig

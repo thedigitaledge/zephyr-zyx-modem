@@ -1,0 +1,316 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
+#
+# Kconfig definition for Zephyr Modem Protocols and Console Integration.
+
+menu "Zephyr Modem Protocols"
+
+config MODEM_XMODEM
+	bool "XMODEM Protocol"
+	default n
+	select CRC
+	help
+	  Enable XMODEM protocol engine (128-byte and 1K blocks, CRC16 and Checksum).
+
+if MODEM_XMODEM
+
+config MODEM_XMODEM_BLOCK_SIZE_1024
+	bool "Use 1024-byte blocks by default (XMODEM-1K)"
+	default y
+	help
+	  When enabled, XMODEM uses 1024-byte payload blocks. Otherwise 128-byte blocks are used.
+
+config MODEM_XMODEM_USE_CRC
+	bool "Use CRC16 by default"
+	default y
+	help
+	  When enabled, XMODEM negotiates CRC16 mode ('C'). Otherwise 8-bit checksum is used.
+
+endif # MODEM_XMODEM
+
+config MODEM_YMODEM
+	bool "YMODEM Protocol"
+	default n
+	select CRC
+	help
+	  Enable YMODEM protocol engine (Block 0 file metadata, batch transfer).
+
+config MODEM_ZMODEM
+	bool "ZMODEM Protocol"
+	default y
+	select CRC
+	help
+	  Enable ZMODEM protocol engine (streaming binary/hex frames, ZDLE escape).
+
+if MODEM_ZMODEM
+
+config MODEM_ZMODEM_USE_CRC32
+	bool "Enable 32-bit CRC by default for ZMODEM"
+	default y
+	help
+	  When enabled, ZMODEM uses 32-bit CRC (ZBIN32). Otherwise 16-bit CRC is used.
+
+config MODEM_ZMODEM_ESCAPE_CTRL_CHARS
+	bool "Escape control characters (XON/XOFF) in ZMODEM"
+	default y
+	help
+	  When enabled, ZMODEM escapes control characters via ZDLE to support software flow control.
+
+config MODEM_AUTO_START
+	bool "ZMODEM Auto-Start Detection"
+	default y
+	help
+	  Enable background monitoring of console input stream for ZMODEM initiation sequence.
+
+config MODEM_ZMODEM_RLE
+	bool "Enable ZMODEM Run-Length Encoding (RLE) Data Compression"
+	default y
+	help
+	  Enable ZMODEM RLE byte compression layer for repetitive data payload streaming.
+
+endif # MODEM_ZMODEM
+
+config MODEM_HW_CRC
+	bool "Hardware-Accelerated CRC Offloading"
+	default n
+	help
+	  Enable offloading CRC16 and CRC32 calculations to Zephyr hardware CRC accelerator driver API.
+
+config MODEM_FLOW_CONTROL
+	bool "RTS/CTS Hardware & XON/XOFF Software Flow Control"
+	default y
+	help
+	  Enable hardware RTS/CTS and software XON/XOFF flow control configuration support.
+
+config MODEM_FLASH_PARTITION
+	bool "MCUBoot / Direct Flash Partition Writes"
+	default y
+	depends on FLASH_MAP
+	help
+	  Enable direct streaming uploads to raw flash partitions (e.g. MCUBoot slot1) without VFS.
+
+config MODEM_MCUBOOT_UPDATE
+	bool "MCUBoot Dual-Bank Image Upgrade Manager (modem update)"
+	default y
+	depends on FLASH_MAP
+	help
+	  Enable high-level firmware upgrade command streaming into slot1 and requesting MCUBoot reboot upgrade.
+
+config MODEM_NVS_CHECKPOINTS
+	bool "NVS / Settings Checkpoint Transfer Auto-Resume Across Reboots"
+	default y
+	help
+	  Persist file transfer offset checkpoints to NVS or Settings subsystem to survive unexpected reboots.
+
+config MODEM_CRYPTO_STREAM
+	bool "In-Flight Payload Encryption Layer (PSA Crypto / MbedTLS)"
+	default n
+	help
+	  Enable streaming AES/ChaCha20 payload encryption/decryption before serial transmission.
+
+config MODEM_STRESS_TEST
+	bool "Fault Injection & Protocol Stress Test Harness"
+	default y
+	help
+	  Enable fault injection test harness helpers for simulating noisy serial lines and dropped packets.
+
+config MODEM_STATS
+	bool "Packet Error & Statistical Counter Diagnostics (modem stats)"
+	default y
+	help
+	  Maintain in-memory diagnostics counters tracking CRC errors, retries, and efficiency.
+
+config MODEM_ADAPTIVE_PACING
+	bool "Adaptive Pacing & Dynamic Retransmission Backoff"
+	default y
+	help
+	  Dynamically increase inter-block delay or fallback block sizes on noisy links.
+
+config MODEM_FLASH_HELPER
+	bool "Block-Level Sector Erase & Flash Wear-Leveling Helper"
+	default y
+	depends on FLASH_MAP
+	help
+	  Enable sector-by-sector erasing prior to raw flash partition writes.
+
+config MODEM_UART_DMA
+	bool "High-Speed Async UART DMA Ring Buffer Adapter"
+	default y
+	depends on UART_ASYNC_API
+	help
+	  Enable zero-copy async UART DMA ring buffer adapter using Zephyr uart_callback_set API.
+
+config MODEM_USB_CDC_ACM
+	bool "USB CDC-ACM Virtual Serial Port Channel Adapter"
+	default y
+	depends on USB_DEVICE_STACK
+	help
+	  Enable pre-configured USB CDC-ACM virtual serial port bridge for dedicated file transfers.
+
+config MODEM_MCUBOOT_VALIDATE
+	bool "MCUBoot Image Magic & Slot Boundary Validation Helper"
+	default y
+	help
+	  Validate MCUBoot image magic headers (0x96F3B83D) and size limits prior to flash writing.
+
+config MODEM_BLE_NUS
+	bool "BLE Nordic UART Service (NUS) Modem Transport Adapter"
+	default y
+	help
+	  Enable Bluetooth Low Energy Nordic UART Service (NUS) transport adapter.
+
+config MODEM_NET_SOCKET
+	bool "BSD Network Socket Stream Modem Transport Adapter"
+	default y
+	help
+	  Enable TCP BSD socket stream transport wrapper for network file transfers.
+
+config MODEM_DECOMPRESS
+	bool "Stream Decompression Engine (Heatshrink / RLE)"
+	default y
+	help
+	  Enable in-flight stream decompression for compressed incoming file payloads.
+
+config MODEM_DELTA_UPDATE
+	bool "In-Place Binary Delta Patching Engine"
+	default y
+	help
+	  Enable applying binary diff patches directly during file upload reception.
+
+config MODEM_SIGNATURE_VERIFY
+	bool "Firmware Cryptographic Signature Verification"
+	default y
+	help
+	  Enable streaming digest calculation and cryptographic signature authentication.
+
+config MODEM_ENCRYPTED_STREAM
+	bool "Encrypted Transport Stream Payload Envelope"
+	default y
+	help
+	  Enable session-level authenticated stream encryption/decryption envelope.
+
+config MODEM_SESSION_DISPATCHER
+	bool "Multi-Session Transport Dispatcher & Multiplexing"
+	default y
+	help
+	  Enable concurrent transfer channel dispatcher across multiple interfaces.
+
+config MODEM_LOG_ROTATION
+	bool "Storage Wear-Aware Log Chunking & Rotation"
+	default y
+	help
+	  Enable flash sector wear-aware log chunking and automated rotation.
+
+config MODEM_NFC
+	bool "NFC Data Communications Transport Adapter (nRF Connect SDK NFC)"
+	default n
+	help
+	  Enable Near Field Communication (NFC) NDEF serial modem transport adapter
+	  integrated strictly with nRF Connect SDK NFC Subsystem and Type 4 Tag (T4T) emulation.
+
+config MODEM_PACKET_TIMEOUT_MS
+	int "Default Packet Response Timeout (ms)"
+	default 3000
+	help
+	  Default timeout in milliseconds waiting for packet responses.
+
+config MODEM_BYTE_TIMEOUT_MS
+	int "Default Inter-byte Timeout (ms)"
+	default 1000
+	help
+	  Default inter-byte reception timeout in milliseconds.
+
+config MODEM_MAX_RETRIES
+	int "Default Maximum Packet Retries"
+	default 10
+	help
+	  Default maximum number of retransmissions for failed or corrupted packets.
+
+config MODEM_INTER_BLOCK_DELAY_MS
+	int "Inter-block Transmit Delay (ms)"
+	default 0
+	help
+	  Configurable transmit delay in milliseconds inserted between transmitted blocks.
+
+config MODEM_HANDSHAKE_DELAY_MS
+	int "Handshake Retry Delay (ms)"
+	default 1000
+	help
+	  Configurable delay in milliseconds between initial handshake retry attempts.
+
+config MODEM_ENABLE_RESUME
+	bool "Enable ZMODEM file transfer auto-resume by default"
+	default y
+	depends on MODEM_ZMODEM
+	help
+	  When enabled, ZMODEM uses ZRPOS file offset to resume interrupted transfers.
+
+config MODEM_CONSOLE
+	bool "Zephyr Console Modem Protocol Integration"
+	default y
+	depends on FILE_SYSTEM
+	depends on MODEM_XMODEM || MODEM_YMODEM || MODEM_ZMODEM
+	help
+	  Enable shell integration for serial modem transfers and configuration.
+
+if MODEM_CONSOLE
+
+config MODEM_FILE_OVERWRITE_MODE
+	int "Default File Overwrite Mode (0=Overwrite, 1=Skip, 2=Abort)"
+	default 0
+	help
+	  File overwrite policy when target file exists: 0 for Overwrite, 1 for Skip, 2 for Abort.
+
+config MODEM_DEFAULT_TARGET_DIR
+	string "Default Target Directory Path"
+	default ""
+	help
+	  Default storage directory path on target file system for received files.
+
+config MODEM_SYNC_INTERVAL_BLOCKS
+	int "File Storage Sync Interval (in blocks, 0=at end)"
+	default 10
+	help
+	  Interval in received payload blocks between calling storage file sync.
+
+config MODEM_ASYNC_STORAGE
+	bool "Async Storage Writes via Zephyr Workqueue (k_work)"
+	default y
+	help
+	  Offload file system write operations to a background Zephyr workqueue thread.
+
+config MODEM_PROGRESS_BAR
+	bool "Real-time Shell Progress Bar & Metrics"
+	default y
+	help
+	  Render transfer percentage, throughput (KB/s), elapsed time, and ETA on shell console.
+
+config MODEM_DIRECTORY_TRANSFERS
+	bool "Directory Batch Transfers"
+	default y
+	depends on MODEM_YMODEM || MODEM_ZMODEM
+	help
+	  Allow transmitting all files in a directory via YMODEM/ZMODEM batch transfers.
+
+config MODEM_RING_BUFFER
+	bool "Ring Buffer UART Transport Adapter"
+	default y
+	help
+	  Use a Zephyr ring buffer for non-blocking UART byte reception with microsecond precision.
+
+config MODEM_ABORT_KEY
+	bool "Terminal Abort Key Monitoring (Ctrl-C / CAN CAN)"
+	default y
+	help
+	  Monitor console stream during transfer for Ctrl-C or CAN CAN abort key sequences.
+
+config MODEM_ABORT_KEY_CHAR
+	int "Configurable Abort Key Character Code (ASCII)"
+	default 3
+	depends on MODEM_ABORT_KEY
+	help
+	  ASCII byte value used as the terminal abort key (default 3 for Ctrl-C / 0x03, 27 for ESC / 0x1B, 24 for CAN / 0x18).
+
+endif # MODEM_CONSOLE
+
+endmenu

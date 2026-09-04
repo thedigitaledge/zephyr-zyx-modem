@@ -1,0 +1,211 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
+ *
+ * Header file for Zephyr Console / Shell Serial Modem Integration.
+ * Defines high-level API functions for receiving, transmitting,
+ * and configuring file transfer timeouts over Zephyr console.
+ */
+
+#ifndef MODEM_ZEPHYR_CONSOLE_MODEM_H_
+#define MODEM_ZEPHYR_CONSOLE_MODEM_H_
+
+#include <zephyr/kernel.h>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief File Overwrite Policies
+ */
+typedef enum {
+    MODEM_OVERWRITE_ALWAYS = 0, /**< Overwrite existing file */
+    MODEM_OVERWRITE_SKIP   = 1, /**< Skip transfer if file exists */
+    MODEM_OVERWRITE_ABORT  = 2  /**< Abort transfer if file exists */
+} modem_overwrite_mode_t;
+
+/**
+ * @brief Runtime Modem Transfer Settings
+ */
+typedef struct {
+    uint32_t packet_timeout_ms;    /**< Timeout waiting for packet responses */
+    uint32_t byte_timeout_ms;      /**< Timeout waiting for next byte */
+    uint8_t max_retries;           /**< Maximum retries per packet */
+    uint32_t inter_block_delay_ms; /**< Delay inserted between transmitted blocks */
+    uint32_t handshake_delay_ms;   /**< Delay between handshake attempts */
+    modem_overwrite_mode_t overwrite_mode; /**< File overwrite policy */
+#if defined(CONFIG_MODEM_ENABLE_RESUME)
+    bool enable_resume;            /**< Enable ZMODEM auto-resume */
+#endif
+    char default_target_dir[128];  /**< Default storage directory path */
+    uint32_t sync_interval_blocks; /**< Interval in blocks between file syncs */
+#if defined(CONFIG_MODEM_AUTO_START)
+    bool auto_start;               /**< Enable ZMODEM auto-start detection */
+#endif
+#if defined(CONFIG_MODEM_ASYNC_STORAGE)
+    bool async_storage;            /**< Offload file writes to Zephyr workqueue */
+#endif
+#if defined(CONFIG_MODEM_PROGRESS_BAR)
+    bool progress_bar;             /**< Render shell progress bar and throughput */
+#endif
+#if defined(CONFIG_MODEM_DIRECTORY_TRANSFERS)
+    bool directory_transfers;      /**< Enable directory batch transfers */
+#endif
+#if defined(CONFIG_MODEM_RING_BUFFER)
+    bool ring_buffer;              /**< Enable ring buffer UART transport adapter */
+#endif
+#if defined(CONFIG_MODEM_ABORT_KEY)
+    bool abort_key;                /**< Enable terminal abort key monitoring */
+    uint8_t abort_key_char;        /**< Configurable abort key ASCII byte value (default 0x03) */
+#endif
+#if defined(CONFIG_MODEM_FLOW_CONTROL)
+    bool flow_control;             /**< RTS/CTS hardware and XON/XOFF software flow control */
+#endif
+#if defined(CONFIG_MODEM_FLASH_PARTITION)
+    char flash_partition[32];      /**< Target raw flash area partition name (e.g. slot1) */
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_UPDATE)
+    bool mcuboot_update;           /**< MCUBoot dual-bank image upgrade manager */
+#endif
+#if defined(CONFIG_MODEM_NVS_CHECKPOINTS)
+    bool nvs_checkpoints;          /**< NVS / Settings auto-resume checkpoints */
+#endif
+#if defined(CONFIG_MODEM_CRYPTO_STREAM)
+    bool crypto_stream;            /**< In-flight payload streaming encryption */
+#endif
+#if defined(CONFIG_MODEM_UART_DMA)
+    bool uart_dma;                 /**< High-speed zero-copy async UART DMA ring buffer adapter */
+#endif
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
+    bool usb_cdc_acm;              /**< USB CDC-ACM virtual serial port adapter */
+#endif
+#if defined(CONFIG_MODEM_MCUBOOT_VALIDATE)
+    bool mcuboot_validate;         /**< MCUBoot image magic header and slot boundary validation */
+#endif
+#if defined(CONFIG_MODEM_SIGNATURE_VERIFY)
+    bool signature_verify;         /**< Firmware signature verification */
+#endif
+#if defined(CONFIG_MODEM_ENCRYPTED_STREAM)
+    bool encrypted_envelope;       /**< Encrypted stream payload envelope */
+#endif
+#if defined(CONFIG_MODEM_SESSION_DISPATCHER)
+    bool session_dispatcher;       /**< Multi-session transport dispatcher */
+#endif
+#if defined(CONFIG_MODEM_LOG_ROTATION)
+    bool log_rotation;             /**< Wear-aware log rotation */
+#endif
+#if defined(CONFIG_MODEM_NFC)
+    bool nfc_transport;            /**< NFC data communications transport */
+#endif
+} console_modem_settings_t;
+
+/**
+ * @brief Initialize USB CDC-ACM virtual serial port device channel.
+ * @return 0 on success, negative error code on failure.
+ */
+#if defined(CONFIG_MODEM_USB_CDC_ACM)
+int console_modem_setup_usb_cdc_acm(void);
+#else
+static inline int console_modem_setup_usb_cdc_acm(void) { return -ENOTSUP; }
+#endif
+
+/**
+ * @brief Stream MCUBoot image update to secondary partition slot.
+ * @param output_filename Image file or target slot name.
+ * @param protocol Protocol selector (0=ZMODEM, 1=YMODEM, 2=XMODEM).
+ * @return 0 on success, negative error code on failure.
+ */
+int console_modem_mcuboot_update(const char *output_filename, int protocol);
+
+/**
+ * @brief Transfer Statistics Counters
+ */
+typedef struct {
+    uint32_t total_transfers;
+    uint32_t successful_transfers;
+    uint32_t failed_transfers;
+    uint32_t crc_errors;
+    uint32_t retries;
+    size_t total_bytes_rx;
+    size_t total_bytes_tx;
+} modem_stats_t;
+
+/**
+ * @brief Get cumulative modem transfer statistics counters.
+ * @param stats Output pointer for stats structure.
+ */
+#if defined(CONFIG_MODEM_STATS)
+void console_modem_stats_get(modem_stats_t *stats);
+void console_modem_stats_reset(void);
+#else
+static inline void console_modem_stats_get(modem_stats_t *stats) { if (stats) { memset(stats, 0, sizeof(*stats)); } }
+static inline void console_modem_stats_reset(void) {}
+#endif
+
+/**
+ * @brief Channel device binding context for multi-UART / multi-transport instances.
+ */
+typedef struct {
+    const struct device *uart_dev;
+    int (*read_byte)(uint8_t *byte, uint32_t timeout_ms, void *user_data);
+    int (*write_bytes)(const uint8_t *buf, size_t len, void *user_data);
+    void *user_data;
+} console_modem_channel_t;
+
+/**
+ * @brief Bind serial transfer routines to custom device channel instance.
+ * @param channel Pointer to channel binding context structure.
+ * @return 0 on success, negative on error.
+ */
+int console_modem_bind_device(console_modem_channel_t *channel);
+
+/**
+ * @brief Initialize Zephyr console modem commands.
+ *
+ * Registers modem shell commands with the Zephyr shell subsystem.
+ *
+ * @return 0 on success, negative error code on failure.
+ */
+int zephyr_console_modem_init(void);
+
+/**
+ * @brief Get current runtime modem settings.
+ * @param settings Output pointer for current settings.
+ */
+void console_modem_settings_get(console_modem_settings_t *settings);
+
+/**
+ * @brief Update runtime modem settings.
+ * @param settings Pointer to new settings.
+ */
+void console_modem_settings_set(const console_modem_settings_t *settings);
+
+/** File Receive Functions (Available when CONFIG_FILE_SYSTEM is enabled) */
+int console_modem_rx_xmodem(const char *output_filename);
+int console_modem_rx_ymodem(const char *output_filename);
+int console_modem_rx_zmodem(const char *output_filename);
+
+/** File Transmit Functions (Available when CONFIG_FILE_SYSTEM is enabled) */
+int console_modem_tx_xmodem(const char *input_filename);
+int console_modem_tx_ymodem(const char *input_filename);
+int console_modem_tx_zmodem(const char *input_filename);
+
+/** Advanced Feature Functions */
+int console_modem_tx_directory(const char *dir_path, int protocol);
+
+#if defined(CONFIG_MODEM_AUTO_START)
+bool console_modem_check_autostart(uint8_t byte);
+#else
+static inline bool console_modem_check_autostart(uint8_t byte) { (void)byte; return false; }
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* MODEM_ZEPHYR_CONSOLE_MODEM_H_ */

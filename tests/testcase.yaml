@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
+#
+# Twister test case specification.
+
+tests:
+  modem.zephyr_console_protocols:
+    tags: modem ztest
+    integration_platforms:
+      - native_sim

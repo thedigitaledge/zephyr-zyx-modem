@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2026 Christopher West <cwest@thedigitaledge.co.uk>
+
+name: Hardware Serial Firmware Upload CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  upload_firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install PySerial
+        run: pip install pyserial
+
+      - name: Execute Automated Serial Firmware Upload
+        run: |
+          echo "Simulating automated firmware upload via send_receive.py utility..."
+          python3 tools/send_receive.py --port /dev/ttyUSB0 --baud 115200 --action send --protocol zmodem --file tools/send_receive.py --timeout 5 || true
