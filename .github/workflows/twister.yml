@@ -28,6 +28,10 @@ jobs:
         with:
           app-path: '.'
 
+      - name: Run Host Tool Python Unit Tests
+        run: |
+          python3 -m unittest discover -s tests
+
       - name: Build and Run Twister Test Suite & Samples
         run: |
           west twister -T tests/ -T samples/ --integration --inline-logs
