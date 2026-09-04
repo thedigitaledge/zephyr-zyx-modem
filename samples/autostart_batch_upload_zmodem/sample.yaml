@@ -4,4 +4,4 @@ tests:
   sample.zmodem.autostart:
     tags: modem zmodem autostart
     integration_platforms:
-      - qemu_x86
+      - native_sim

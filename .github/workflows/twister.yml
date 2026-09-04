@@ -28,6 +28,6 @@ jobs:
         with:
           app-path: '.'
 
-      - name: Build and Run Twister Test Suite
+      - name: Build and Run Twister Test Suite & Samples
         run: |
-          west twister -T tests/ --integration --inline-logs
+          west twister -T tests/ -T samples/ --integration --inline-logs
